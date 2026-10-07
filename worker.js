@@ -821,7 +821,7 @@ body { background: var(--paper); color: var(--text); font-family: "Space Grotesk
 a { color: inherit; }
 img, svg, video { display: block; max-width: 100%; }
 :focus-visible { outline: 3px solid var(--teal-ink); outline-offset: 3px; }
-.wrap { max-width: 860px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+.wrap { max-width: 1920px; margin: 0 auto; padding-left: clamp(16px, 3vw, 40px); padding-right: clamp(16px, 3vw, 40px); }   /* Desktop: fast die ganze Breite */
 .sect { padding-top: 44px; }
 .label { font: 700 12px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--teal-ink); }
 h2, .h1 { margin-top: 8px; font: 900 clamp(46px, 13vw, 88px)/1.03 var(--display); text-transform: uppercase; color: var(--ink); }
@@ -1053,8 +1053,16 @@ body.pay { background: #fff; color: var(--ink); }
   .clip.gross { grid-column: 1 / -1; }
   .duo { grid-template-columns: 1fr 1fr; }
 }
-@media (min-width: 960px) {   /* Text bleibt in der Spalte, das Bild wächst nach rechts hinaus */
-  .hero { grid-template-columns: 420px minmax(0, 720px); max-width: none; margin-left: max(0px, (100% - 860px) / 2); padding-right: 40px; }
+@media (min-width: 960px) {
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
+}
+@media (min-width: 1100px) {   /* Desktop: drei Clips nebeneinander, die ganze Show quer mit Titel und Knopf rechts */
+  .clips { grid-template-columns: repeat(3, 1fr); }
+  .clip.gross { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); column-gap: 28px; }
+  .clip.gross video { grid-row: span 2; }
+  .clip.gross .cmeta { align-self: end; }
+  .clip.gross .btn { align-self: start; }
+  .clip.gross .cmeta .txt b { font-size: 48px; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
