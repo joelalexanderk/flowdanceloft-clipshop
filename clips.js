@@ -10,7 +10,6 @@ export const SHOW = {
   name: 'The Space Between',
   titel: 'The Space', pointe: 'Between.',   // die zwei Zeilen des grossen Titels
   pauseNach: 16,
-  onlineBis: '31.12.2027',
 };
 
 // Preise in Rappen: 1 Clip, 2 Clips und die ganze Show als ein Video (eigener Artikel).

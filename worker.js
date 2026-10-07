@@ -164,7 +164,7 @@ Danke für deinen Kauf. Deine Clips der Show «${SHOW.name}» sind bereit:
 ${origin}/k/${k.token}
 
 Das ist dein persönlicher Link. Dort kannst du die Clips ansehen und herunterladen.
-Online bleiben sie mindestens bis ${SHOW.onlineBis}. Lade sie am besten gleich herunter.
+Der Link bleibt gültig, du kannst jederzeit zurückkommen.
 
 Die Clips sind für den privaten Gebrauch bestimmt. Bitte nicht weitergeben oder veröffentlichen.
 
@@ -440,7 +440,7 @@ async function meine(req, env, url, t) {
     ${status}
     ${show || meins.length ? `<div class="clips">${show ? karte(SHOWVIDEO, 'Die ganze Show', `${SHOW.name} · die ganze Vorstellung als ein Video`) : ''}${
       meins.map(c => karte(c.nr, c.titel, c.gruppe)).join('')}</div>
-    <p class="tip">Lade deine Videos herunter, dann bleiben sie dir für immer. Online sind sie mindestens bis ${SHOW.onlineBis}.${show ? ' Die ganze Show ist eine grosse Datei, lade sie am besten im WLAN.' : ''} Auf dem iPhone landet der Download in der Dateien-App, über «Teilen» und «Video sichern» kommt er in die Fotos.</p>`
+    <p class="tip">Deine Videos bleiben hier jederzeit verfügbar, du kannst sie auch herunterladen.${show ? ' Die ganze Show ist eine grosse Datei, lade sie am besten im WLAN.' : ''} Auf dem iPhone landet der Download in der Dateien-App, über «Teilen» und «Video sichern» kommt er in die Fotos.</p>`
       : '<p class="lead">Hier erscheinen deine Videos, sobald die Zahlung eingegangen ist.</p>'}
   </section>
   ${rest.length || !show ? `<section class="sect wrap">
