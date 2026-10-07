@@ -212,12 +212,12 @@ assert.equal((await call('/p/99')).status, 404);             // nicht im Program
 assert.equal((await call('/p/4')).status, 200);
 assert.equal((await call('/p/hero')).status, 200);
 
-// ---------- Admin: zu tun, suchen, Link schicken, erstatten, löschen, Export ----------
+// ---------- Admin: suchen, Link schicken, erstatten, löschen, Export ----------
 
 const adm = { authorization: 'Basic ' + btoa('joel:pw') }, hier = { ...adm, origin: HOST };
 html = await (await call('/admin', { headers: adm })).text();
-assert.ok(html.includes('Netto, geschätzt') && html.includes('<b>Video fehlt</b> · Nr. 01, 02, 03'));   // nur Nr. 4, 11, 14 haben Dateien
-assert.ok(html.includes('Zahlung offen') && html.includes('beides@beispiel.ch'));                          // offen, noch nicht bestätigt
+assert.ok(html.includes('Netto, geschätzt'));
+assert.ok(!html.includes('Zu tun') && !html.includes('beides@beispiel.ch'));   // offene Zahlungen stehen nicht in der Liste
 assert.ok(html.includes(`data-link="${HOST}/k/${t}"`));
 html = await (await call('/admin?q=FAMILIE', { headers: adm })).text();
 assert.ok(html.includes('1 Treffer') && html.includes('familie@beispiel.ch') && !html.includes('show@beispiel.ch</b>'));

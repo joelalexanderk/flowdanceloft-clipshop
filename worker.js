@@ -611,8 +611,6 @@ const gebuehr = r => Math.round(r * GEBUEHR.prozent / 100) + GEBUEHR.fix;
 
 const STATUS = { confirmed: 'bezahlt', refunded: 'erstattet', waiting: 'offen' };
 const ADMIN_HINWEIS = {
-  bezahlt: 'Die Zahlung ist bestätigt, die Videos sind freigeschaltet.',
-  offen: 'Die Zahlung ist noch nicht bestätigt.',
   gesendet: 'Der Link ist per Mail unterwegs.',
   keinemail: 'Mails sind noch nicht eingerichtet. Kopiere den Link und schick ihn selbst.',
   erstattet: 'Als erstattet markiert, der Zugang ist gesperrt. Das Geld zahlst du beim Zahlungsanbieter zurück.',
@@ -641,15 +639,13 @@ async function zahlungen(env) {
   return rows;
 }
 
-const alter = s => s < 3600 ? `${Math.max(1, Math.round(s / 60))} Min.` : s < TAG ? `${Math.round(s / 3600)} Std.` : `${Math.round(s / TAG)} Tagen`;
-
 async function admin(req, env, url) {
   if (!basicOk(req, env.ADMIN_PASSWORD)) return passwort();
   const off = (await env.DB.prepare(
     "SELECT DISTINCT gateway_id FROM purchases WHERE status = 'waiting' AND created_at > ? LIMIT 20").bind(now() - 7 * TAG).all()).results;
   for (const r of off) await settle(env, url.origin, r.gateway_id).catch(e => console.error(e));
 
-  const alle = await zahlungen(env), da = await vorhanden(env), q = (url.searchParams.get('q') || '').trim().toLowerCase();
+  const alle = await zahlungen(env), q = (url.searchParams.get('q') || '').trim().toLowerCase();
   const bez = alle.filter(z => z.status === 'confirmed' && !gratis(z));
   const umsatz = bez.reduce((s, z) => s + z.betrag, 0), netto = umsatz - bez.reduce((s, z) => s + gebuehr(z.betrag), 0);
   const proNr = new Map();
@@ -660,19 +656,6 @@ async function admin(req, env, url) {
       <input type="hidden" name="was" value="${was}"><input type="hidden" name="id" value="${esc(id)}"><input type="hidden" name="q" value="${esc(q)}">
       <button class="a${was === 'loeschen' ? ' rot' : ''}">${text}</button></form>`;
 
-  // Zu tun: offene Zahlungen, fehlende Dateien, was noch nicht eingerichtet ist
-  const fehlt = (was, cs) => cs.length ? [`<li><span><b>${was}</b> · ${cs.length === 1 ? `Nr. ${nr2(cs[0].nr)} ${esc(cs[0].titel)}` : `Nr. ${cs.map(c => nr2(c.nr)).join(', ')}`}</span></li>`] : [];
-  const tun = [
-    ...alle.filter(z => z.status === 'waiting' && z.am > now() - 7 * TAG).reverse().map(z => `<li><span><b>Zahlung offen</b> · ${esc(z.email)} · ${gekauft(z.hat)} · ${chf(z.betrag)} · seit ${alter(now() - z.am)}</span>
-      ${z.gateway_id.startsWith('demo-') ? '<small>Demo</small>' : aktion('pruefen', z.gateway_id, 'Zahlung prüfen')}</li>`),
-    ...(da.has(key(SHOWVIDEO, 'mp4')) ? [] : ['<li><span><b>Ganze Show fehlt</b> · auf der Startseite steht «folgt»</span></li>']),
-    ...fehlt('Video fehlt', CLIPS.filter(c => !da.has(key(c.nr, 'mp4')))),
-    ...fehlt('Standbild fehlt', CLIPS.filter(c => da.has(key(c.nr, 'mp4')) && !da.has(key(c.nr, 'jpg')))),
-    ...(env.PAYREXX_API_KEY ? [] : ['<li><span><b>Demo-Modus</b> · Zahlungen sind nicht echt, der Zahlungsanbieter ist noch nicht verbunden</span></li>']),
-    ...(env.RESEND_API_KEY ? [] : ['<li><span><b>Mails noch nicht eingerichtet</b> · Links nur über «Link kopieren» weitergeben</span></li>']),
-    ...(env.CONTACT_EMAIL ? [] : ['<li><span><b>Kontaktadresse fehlt</b> · im Fuss der Seite steht keine E-Mail-Adresse für Fragen</span></li>']),
-  ];
-
   const liste = alle.filter(z => z.status !== 'waiting' && (!q || z.email.includes(q))).reverse();
   const m = url.searchParams.get('m');
   return seite('Verkäufe · Flow Dance Loft Clips', `${kopfzeile()}
@@ -682,10 +665,6 @@ async function admin(req, env, url) {
     ${Object.hasOwn(ADMIN_HINWEIS, m ?? '') ? `<p class="note">${ADMIN_HINWEIS[m]}</p>` : ''}
     <div class="kpi"><div><b>${chf(umsatz)}</b>Umsatz</div><div><b>${chf(netto)}</b>Netto, geschätzt</div><div><b>${bez.length}</b>Käufe</div></div>
     <p class="tip">${proNr.get(SHOWVIDEO) || 0} × ganze Show, ${clips} einzelne Clips. Netto heisst nach den geschätzten Gebühren des Zahlungsanbieters.</p>
-  </section>
-  <section class="sect wrap">
-    <p class="label">Zu tun</p>
-    <ul class="tun">${tun.join('') || '<li class="ok"><span>Alles erledigt.</span></li>'}</ul>
   </section>
   <section class="sect wrap">
     <p class="label">Käufe</p>
@@ -735,11 +714,7 @@ async function adminAktion(req, env, url) {
   if ((o && o !== url.origin) || req.headers.get('sec-fetch-site') === 'cross-site') return new Response('Nicht erlaubt', { status: 403 });
   const f = await req.formData(), was = f.get('was'), id = String(f.get('id') || ''), q = String(f.get('q') || '');
   let m = '';
-  if (was === 'pruefen') {
-    await settle(env, url.origin, id).catch(e => console.error(e));
-    const z = await env.DB.prepare('SELECT status FROM purchases WHERE gateway_id = ? LIMIT 1').bind(id).first();
-    m = z?.status === 'confirmed' ? 'bezahlt' : 'offen';
-  } else if (was === 'mail' && UUID.test(id) && await kaeufer(env, id)) {
+  if (was === 'mail' && UUID.test(id) && await kaeufer(env, id)) {
     await linkMail(env, url.origin, (await kaeufer(env, id)).email, [id]);
     m = env.RESEND_API_KEY ? 'gesendet' : 'keinemail';
   } else if (was === 'erstatten') {
@@ -980,10 +955,6 @@ body:has(.shop :checked) .foot { padding-bottom: 195px; }
 .wordmark { margin: 30px 0 -.07em; font: 900 clamp(40px, 13.4vw, 122px)/.76 var(--display); text-transform: uppercase; white-space: nowrap; color: var(--paper); }
 
 .admin { padding-bottom: 70px; }
-.tun { list-style: none; margin-top: 10px; border-top: var(--b); }
-.tun li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: var(--b); color: var(--ink); font-size: 14.5px; }
-.tun li.ok { color: var(--teal-ink); font-weight: 500; }
-.tun small { font: 700 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
 .kaeufe { margin-top: 18px; border-top: var(--b); }
 .kauf { padding: 14px 0; border-bottom: var(--b); }
 .kauf.weg { opacity: .5; }
