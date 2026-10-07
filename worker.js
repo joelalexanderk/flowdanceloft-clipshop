@@ -398,9 +398,6 @@ const zeile = (c, da) => da.has(key(c.nr, 'mp4'))
 // «zwischen» steht zwischen der ganzen Show und dem Programm (Startseite: die Überschrift zum Programm).
 function auswahl(action, clips, da, hat, mitMail, zwischen) {
   const pause = i => i > 0 && clips[i - 1].nr <= SHOW.pauseNach && clips[i].nr > SHOW.pauseNach;
-  // Der Streifen zeigt das Programm auf einen Blick: da, folgt, gekauft, gewählt.
-  const streifen = CLIPS.map((c, i) => (i > 0 && CLIPS[i - 1].nr <= SHOW.pauseNach && c.nr > SHOW.pauseNach ? '<i class="p"></i>' : '')
-    + `<i data-n="${c.nr}" class="${hat.has(c.nr) ? 'own' : da.has(key(c.nr, 'mp4')) ? '' : 's'}"></i>`).join('');
   // Die ganze Show ist immer zu sehen. Ohne Datei im Bucket steht «folgt», kaufbar wird sie mit dem Upload.
   const show = !hat.has(SHOWVIDEO), kaufbar = show && da.has(key(SHOWVIDEO, 'mp4'));
   const text = '<span class="txt"><b>Die ganze Show</b><small>Die ganze Vorstellung als ein Video</small></span>';
@@ -410,7 +407,6 @@ function auswahl(action, clips, da, hat, mitMail, zwischen) {
     <span class="tog">${ICON.plus}${ICON.haken}</span></label>`
     : show ? `<div class="alle soon" id="show">${text}<span class="pill out">folgt</span></div>` : ''}
   ${clips.length ? `${zwischen || (show ? '<p class="oder">Oder einzelne Nummern</p>' : '')}
-  <div class="strip" aria-hidden="true">${streifen}</div>
   <div class="list">${clips.map((c, i) => (pause(i) ? '<div class="pause">Pause</div>' : '') + zeile(c, da)).join('')}</div>` : ''}
   <div class="bar">
     ${mitMail ? '<label for="mail">E-Mail für deinen Link</label><input id="mail" type="email" name="email" required autocomplete="email" placeholder="familie@beispiel.ch">' : ''}
@@ -427,7 +423,6 @@ for (const f of document.querySelectorAll('form.shop')) {
     const show = !!f.querySelector('.alle :checked'), clips = n + (n === 1 ? ' Clip' : ' Clips');
     f.querySelector('.bar-l').textContent = show ? 'Ganze Show' + (n ? ' + ' + clips : '') : clips + ' ausgewählt';
     f.querySelector('.bar-p').textContent = 'CHF ' + (preis(paid + n) - preis(paid) + (show ? ${PREIS_SHOW / 100} : 0));
-    for (const c of zeilen) document.querySelector('.strip [data-n="' + c.value + '"]')?.classList.toggle('on', c.checked);
   };
   f.addEventListener('change', zeigen); addEventListener('pageshow', zeigen);
 }
@@ -841,13 +836,6 @@ h2 em, .h1 em { font-style: normal; color: var(--teal-big); }
 .taped .tape:nth-of-type(1) { top: -15px; left: -20px; transform: rotate(-10deg); }
 .taped .tape:nth-of-type(2) { top: -12px; right: -24px; transform: rotate(15deg); }
 
-.strip { display: flex; gap: 3px; margin-top: 14px; }
-.strip i { flex: 1; height: 8px; border-radius: 4px; background: var(--ink); transition: background .15s; }
-.strip i.s { background: #D6D5D1; }
-.strip i.own { background: var(--teal); }
-.strip i.on { background: var(--aqua); box-shadow: inset 0 0 0 2px var(--ink); }
-.strip i.p { flex: 0 0 8px; background: none; }
-
 .alle { position: relative; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; margin-top: 20px;
         padding: 14px 12px 14px 14px; background: var(--teal); border: var(--b); border-radius: var(--r); box-shadow: var(--shadow);
         cursor: pointer; transition: transform .12s, box-shadow .12s, background .15s; }
@@ -1038,6 +1026,6 @@ body.pay { background: #fff; color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .run { animation: none; }
-  .btn, .row, .alle, .strip i { transition: none; }
+  .btn, .row, .alle { transition: none; }
 }
 `;
