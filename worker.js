@@ -141,7 +141,7 @@ async function gateway(env, origin, t, email, betrag, was) {
   }
   const seite = `${origin}/k/${t}`;
   return payrexx(env, 'POST', 'Gateway/', new URLSearchParams({
-    amount: betrag, currency: 'CHF', purpose: `Flow Dance Loft Clips · ${was}`, referenceId: t,
+    amount: betrag, currency: 'CHF', purpose: `Flowing Arts Kulturverein · Videos: ${was}`, referenceId: t,
     successRedirectUrl: seite + '?z=1', failedRedirectUrl: seite, cancelRedirectUrl: seite,
     'fields[email][value]': email, skipResultPage: 1,
   }).toString());
@@ -253,7 +253,7 @@ function mailHtml(env, origin, { vorschau, titel, pointe, absatz, liste = [], kn
     ? `<br><span style="color:#66635D;font-size:13px;">Fragen? Antworte einfach auf diese Mail.</span>` : ''}</div>`, 28)}
   <tr><td style="padding-top:28px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#444340;padding:20px 28px;${sans}font-size:12px;line-height:1.6;color:#E4E3DF;">
     <div style="${mono}font-size:11px;color:#4BE2D3;">grow with the flow</div>
-    <div style="margin-top:8px;"><b style="color:#FFFFFF;">Flow Dance Loft GmbH</b> · Zelgli 3 · 5452 Oberrohrdorf</div>
+    <div style="margin-top:8px;"><b style="color:#FFFFFF;">Flowing Arts Kulturverein</b> · Zelgli 3 · 5452 Oberrohrdorf</div>
     <div style="margin-top:8px;">Die Videos sind für den privaten Gebrauch bestimmt. Bitte nicht weitergeben oder veröffentlichen. Technik: Seismos Media.</div>
   </td></tr></table></td></tr>
 </table></td></tr></table>
@@ -319,7 +319,7 @@ async function demoZahlung(req, env, url, id) {
   const betrag = 'CHF ' + ((gezahlt(new Set([...hat, ...rows.map(r => r.clip)])) - gezahlt(hat)) / 100).toFixed(2);
   return seite('Zahlung (Demo)', `<main>
   <div class="demo">Demo · keine echte Zahlung</div>
-  <div class="merchant">Flow Dance Loft GmbH</div>
+  <div class="merchant">Flowing Arts Kulturverein</div>
   <div class="via">Clips «${SHOW.name}» ${SHOW.jahr}</div>
   <div class="card">
     ${rows.map(r => r.clip === SHOWVIDEO ? '<div class="line"><span>Die ganze Show</span><span>Video</span></div>'
@@ -334,7 +334,7 @@ async function demoZahlung(req, env, url, id) {
     <label class="pm"><span>Karte<small>Visa · Mastercard</small></span><input type="radio" name="pm"></label>
     <button class="paybtn">${betrag} bezahlen</button>
   </form>
-  <p class="secure">Im echten Shop steht hier die Zahlseite von RaiseNow.<br>Das Geld geht direkt an Flow Dance Loft. <a href="/k/${t}">Abbrechen</a></p>
+  <p class="secure">Im echten Shop steht hier die Zahlseite von RaiseNow.<br>Das Geld geht direkt an den Flowing Arts Kulturverein. <a href="/k/${t}">Abbrechen</a></p>
 </main>`, { klasse: 'pay' });
 }
 
@@ -373,10 +373,10 @@ const kopf = (titel, pointe) =>
 
 const fuss = env => `<footer class="foot"><div class="wrap">
   <p class="label">grow with the flow</p>
-  <p><b>Flow Dance Loft GmbH</b> · Zelgli 3 · 5452 Oberrohrdorf${env.CONTACT_EMAIL
+  <p><b>Flowing Arts Kulturverein</b> · Zelgli 3 · 5452 Oberrohrdorf${env.CONTACT_EMAIL
     ? ` · <a href="mailto:${esc(env.CONTACT_EMAIL)}">${esc(env.CONTACT_EMAIL)}</a>` : ''}</p>
   <p>Die Clips sind digitale Inhalte und nach der Zahlung sofort verfügbar. Sie sind für den privaten Gebrauch bestimmt, bitte nicht weitergeben oder veröffentlichen.</p>
-  <p>Verkauf: Flow Dance Loft. Technik: Seismos Media, im Auftrag von Flow Dance Loft. <a href="/bedingungen">Bedingungen und Datenschutz</a></p>
+  <p>Verkauf: Flowing Arts Kulturverein. Technik: Seismos Media, im Auftrag des Vereins. <a href="/bedingungen">Bedingungen und Datenschutz</a></p>
   <div class="wordmark" aria-hidden="true">Flow Dance Loft</div>
 </div></footer>`;
 
@@ -531,19 +531,19 @@ async function video(req, env, url, t, nr) {
 // Seismos-Adresse aus brand.FIRMA in den Vorlagen.
 function bedingungen(env) {
   const mail = env.CONTACT_EMAIL && `<a href="mailto:${esc(env.CONTACT_EMAIL)}">${esc(env.CONTACT_EMAIL)}</a>`;
-  const melden = mail ? `Schreib Flow Dance Loft an ${mail}` : 'Melde dich bei Flow Dance Loft';
+  const melden = mail ? `Schreib dem Flowing Arts Kulturverein an ${mail}` : 'Melde dich beim Flowing Arts Kulturverein';
   return seite('Bedingungen · Flow Dance Loft Clips', `${kopfzeile()}
 <main>
   <section class="sect wrap">
     ${kopf('Bedingungen', '& Datenschutz.')}
     <p class="lead">Kurz und offen: wer hinter diesem Shop steht, was du kaufst und was mit deinen Daten passiert.</p>
     <div class="duo">
-      <div><p class="label">Verkauft</p><h3>Flow Dance Loft</h3>
-        <p>Der Shop gehört Flow Dance Loft. Flow Dance Loft verkauft die Videos, bekommt das Geld und ist deine Ansprechpartnerin, auch für die Rechte an Musik und Bild.</p>
-        <p class="adr">Flow Dance Loft GmbH · Zelgli 3 · 5452 Oberrohrdorf${mail ? ` · ${mail}` : ''}</p></div>
+      <div><p class="label">Verkauft</p><h3>Flowing Arts Kulturverein</h3>
+        <p>Der Shop gehört dem Flowing Arts Kulturverein. Der Verein verkauft die Videos, bekommt das Geld und ist dein Ansprechpartner, auch für die Rechte an Musik und Bild.</p>
+        <p class="adr">Flowing Arts Kulturverein · Zelgli 3 · 5452 Oberrohrdorf${mail ? ` · ${mail}` : ''}</p></div>
       <div><p class="label">Liefert aus</p><h3>Seismos Media</h3>
-        <p>Seismos Media hat die Show gefilmt und betreibt den Shop technisch im Auftrag von Flow Dance Loft: Webseite, Videos und Mails. Darum steht «seismos.ch» in der Adresse, und die Mails kommen von clips@seismos.ch.</p>
-        <p>Dafür bekommt Seismos Media von Flow Dance Loft eine feste Pauschale. Am Verkauf der Videos verdient Seismos Media nichts mit.</p>
+        <p>Seismos Media hat die Show gefilmt und betreibt den Shop technisch im Auftrag des Flowing Arts Kulturvereins: Webseite, Videos und Mails. Darum steht «seismos.ch» in der Adresse, und die Mails kommen von clips@seismos.ch.</p>
+        <p>Dafür bekommt Seismos Media vom Flowing Arts Kulturverein eine feste Pauschale. Am Verkauf der Videos verdient Seismos Media nichts mit.</p>
         <p class="adr">Seismos Media by J. Król · Seefeldstrasse 181 · 8008 Zürich</p></div>
     </div>
   </section>
@@ -558,7 +558,7 @@ function bedingungen(env) {
       <h3>So läuft der Kauf</h3>
       <ol>
         <li>Du wählst die Videos aus und gibst deine E-Mail-Adresse an.</li>
-        <li>Du bezahlst auf der Zahlseite von RaiseNow mit TWINT oder Karte. Bis dahin kannst du die Auswahl ändern oder abbrechen. Das Geld geht direkt an Flow Dance Loft.</li>
+        <li>Du bezahlst auf der Zahlseite von RaiseNow mit TWINT oder Karte. Bis dahin kannst du die Auswahl ändern oder abbrechen. Das Geld geht direkt an den Flowing Arts Kulturverein.</li>
         <li>Sobald die Zahlung bestätigt ist, sind die Videos freigeschaltet. Du landest auf deiner persönlichen Seite und bekommst den Link zusätzlich per E-Mail.</li>
       </ol>
       <h3>Kein Konto, ein Link</h3>
@@ -568,7 +568,7 @@ function bedingungen(env) {
       <h3>Nur privat</h3>
       <p>Die Videos sind für dich und deine Familie. Mit Familie und Freunden anschauen ist in Ordnung. Nicht erlaubt ist, sie zu veröffentlichen, weiterzugeben oder zu verkaufen, also etwa auf Instagram, TikTok, YouTube, im WhatsApp-Status oder im Klassenchat. Der Grund: Auf den Videos tanzen auch andere Kinder, und die Musik gehört nicht uns.</p>
       <h3>Wenn etwas nicht stimmt</h3>
-      <p>Die Videos sind digital und sofort verfügbar, darum gibt es kein Rückgaberecht. Funktioniert ein Video nicht oder hast du aus Versehen doppelt bezahlt, ${melden.charAt(0).toLowerCase() + melden.slice(1)}. Flow Dance Loft findet eine Lösung oder zahlt den Betrag zurück. Es gilt Schweizer Recht.</p>
+      <p>Die Videos sind digital und sofort verfügbar, darum gibt es kein Rückgaberecht. Funktioniert ein Video nicht oder hast du aus Versehen doppelt bezahlt, ${melden.charAt(0).toLowerCase() + melden.slice(1)}. Der Verein findet eine Lösung oder zahlt den Betrag zurück. Es gilt Schweizer Recht.</p>
     </div>
   </section>
   <section class="sect wrap">
@@ -576,13 +576,13 @@ function bedingungen(env) {
     <h2>Deine <em>Daten.</em></h2>
     <div class="prose">
       <h3>Verantwortlich</h3>
-      <p>Flow Dance Loft GmbH, Zelgli 3, 5452 Oberrohrdorf. Seismos Media bearbeitet die Daten im Auftrag von Flow Dance Loft.</p>
+      <p>Flowing Arts Kulturverein, Zelgli 3, 5452 Oberrohrdorf. Seismos Media bearbeitet die Daten im Auftrag des Vereins.</p>
       <h3>Was gespeichert wird</h3>
       <p>Deine E-Mail-Adresse, was du gekauft hast, wann und zu welchem Betrag, und ob die Zahlung bestätigt ist. Mehr nicht. Deine Karten- oder TWINT-Angaben gibst du direkt bei RaiseNow ein, dieser Shop bekommt sie nie.</p>
       <h3>Wofür</h3>
       <p>Damit du deine Videos bekommst und den Link wieder anfordern kannst, für Rückfragen und für die Buchhaltung. Du bekommst nur Mails zu deinem Kauf: die Bestätigung und den Link, wenn du ihn anforderst. Kein Newsletter, keine Werbung.</p>
       <h3>Wer die Daten sieht</h3>
-      <p>Flow Dance Loft und, für den Betrieb, Seismos Media. Deine Daten werden weder verkauft noch für etwas anderes verwendet. Dazu kommen drei Dienstleister:</p>
+      <p>Der Flowing Arts Kulturverein und, für den Betrieb, Seismos Media. Deine Daten werden weder verkauft noch für etwas anderes verwendet. Dazu kommen drei Dienstleister:</p>
       <ul>
         <li><b>RaiseNow AG</b>, Zürich, Schweiz: wickelt die Zahlung ab. Für deine Zahlungsangaben gilt die Datenschutzerklärung von RaiseNow.</li>
         <li><b>Cloudflare, Inc.</b>, USA: betreibt die Webseite und speichert Datenbank und Videos in Westeuropa. Beim Aufruf der Seite verarbeitet Cloudflare technisch nötige Daten wie deine IP-Adresse, auch ausserhalb Europas.</li>
@@ -592,7 +592,7 @@ function bedingungen(env) {
       <h3>Cookie</h3>
       <p>Ein einziges Cookie merkt sich deinen persönlichen Link auf diesem Gerät, damit du direkt bei deinen Videos landest. Es gilt ein Jahr. Keine Werbe- oder Analyse-Cookies, kein Tracking, die Schriften liegen auf diesem Server. Auf deiner persönlichen Seite löscht «Nicht dein Gerät?» das Cookie.</p>
       <h3>Wie lange</h3>
-      <p>Solange deine Videos online sind, denn ohne diese Angaben funktioniert dein Link nicht. Was die Buchhaltung braucht, bewahrt Flow Dance Loft so lange auf, wie es das Gesetz verlangt.</p>
+      <p>Solange deine Videos online sind, denn ohne diese Angaben funktioniert dein Link nicht. Was die Buchhaltung braucht, bewahrt der Verein so lange auf, wie es das Gesetz verlangt.</p>
       <h3>Deine Rechte</h3>
       <p>Du kannst jederzeit fragen, was über dich gespeichert ist, und es berichtigen oder löschen lassen. ${melden}. Nach dem Löschen funktioniert dein Link nicht mehr, lade die Videos also vorher herunter.</p>
     </div>

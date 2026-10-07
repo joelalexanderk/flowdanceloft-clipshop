@@ -81,7 +81,7 @@ const t = tokenAus(r);
 assert.equal(gesendet.payrexx.length, 1);
 assert.equal(gesendet.payrexx[0].amount, '1500');           // zwei Clips. Nr. 13 (keine Datei) und Nr. 99 (gibt es nicht) fallen weg
 assert.equal(gesendet.payrexx[0].currency, 'CHF');
-assert.equal(gesendet.payrexx[0].purpose, 'Flow Dance Loft Clips · Nr. 4, Nr. 11');
+assert.equal(gesendet.payrexx[0].purpose, 'Flowing Arts Kulturverein · Videos: Nr. 4, Nr. 11');
 assert.equal(gesendet.payrexx[0].referenceId, t);
 assert.equal(gesendet.payrexx[0]['fields[email][value]'], 'familie@beispiel.ch');
 assert.equal(gesendet.payrexx[0].successRedirectUrl, `${HOST}/k/${t}?z=1`);
@@ -166,7 +166,7 @@ assert.equal(gesendet.payrexx.at(-1).amount, '500');
 r = await call('/buy', { form: { clip: '0', email: 'show@beispiel.ch' } });
 const show = tokenAus(r);
 assert.equal(gesendet.payrexx.at(-1).amount, '2500');
-assert.equal(gesendet.payrexx.at(-1).purpose, 'Flow Dance Loft Clips · ganze Show');
+assert.equal(gesendet.payrexx.at(-1).purpose, 'Flowing Arts Kulturverein · Videos: ganze Show');
 assert.equal((await call(`/k/${show}/v/0`)).status, 403);                                // erst nach der Zahlung
 gwStatus.set(String(gwId), 'confirmed');
 html = await (await call(`/k/${show}?z=1`)).text();
@@ -184,7 +184,7 @@ assert.equal(r.headers.get('location'), `${HOST}/k/${show}?m=leer`);
 // Show und zwei Clips zusammen: 25 + 15
 await call('/buy', { form: [['clip', '0'], ['clip', '4'], ['clip', '11'], ['email', 'beides@beispiel.ch']] });
 assert.equal(gesendet.payrexx.at(-1).amount, '4000');
-assert.equal(gesendet.payrexx.at(-1).purpose, 'Flow Dance Loft Clips · ganze Show, Nr. 4, Nr. 11');
+assert.equal(gesendet.payrexx.at(-1).purpose, 'Flowing Arts Kulturverein · Videos: ganze Show, Nr. 4, Nr. 11');
 
 // ---------- Link vergessen ----------
 
