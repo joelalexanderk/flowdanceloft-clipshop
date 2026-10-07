@@ -582,6 +582,9 @@ h2 em, .h1 em { font-style: normal; color: var(--teal-big); }
 .pill b { font: 900 22px/1 var(--display); letter-spacing: .01em; }
 .pill.y { background: var(--aqua); }
 .pill.out { background: none; border-style: dashed; border-color: var(--mute); color: var(--mute); }
+.preise { flex-wrap: nowrap; }   /* drei Kacheln in einer Reihe, auch auf dem Handy: Label über dem Preis */
+.preise .pill { flex: 1; flex-direction: column; align-items: flex-start; gap: 6px; border-radius: var(--r); padding: 10px 12px; }
+.preise .pill b { font-size: 28px; }
 .taped { position: relative; margin: 36px 10px 0; transform: rotate(1.8deg); border: var(--b); background: #111; }
 .taped img { width: 100%; height: auto; aspect-ratio: 16/9; object-fit: cover; }
 .tape { position: absolute; display: block; width: 96px; height: 28px; background: rgba(75, 226, 211, .78); }
@@ -734,6 +737,9 @@ body.pay { background: #fff; color: var(--ink); }
   .txt small { font-size: 14.5px; }
   .clips { grid-template-columns: 1fr 1fr; }
   .clip.gross { grid-column: 1 / -1; }
+}
+@media (min-width: 960px) {   /* Text bleibt in der Spalte, das Bild wächst nach rechts hinaus */
+  .hero { grid-template-columns: 420px minmax(0, 720px); max-width: none; margin-left: max(0px, (100% - 860px) / 2); padding-right: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .run { animation: none; }
