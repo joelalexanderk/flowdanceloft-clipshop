@@ -15,8 +15,10 @@ CREATE TABLE IF NOT EXISTS purchases (
   token      TEXT NOT NULL REFERENCES buyers (token),
   clip       INTEGER NOT NULL,          -- Nummer im Line-up
   gateway_id TEXT NOT NULL,             -- Payrexx-Gateway, im Demo-Modus «demo-…»
-  status     TEXT NOT NULL DEFAULT 'waiting',
-  created_at INTEGER NOT NULL
+  status     TEXT NOT NULL DEFAULT 'waiting',   -- waiting, confirmed, refunded
+  created_at INTEGER NOT NULL,
+  betrag     INTEGER                    -- Betrag der ganzen Zahlung in Rappen, auf jeder Zeile gleich
 );
+-- Bestehende Datenbanken (07.10.2026): ALTER TABLE purchases ADD COLUMN betrag INTEGER;
 CREATE INDEX IF NOT EXISTS purchases_token ON purchases (token);
 CREATE INDEX IF NOT EXISTS purchases_gateway ON purchases (gateway_id);

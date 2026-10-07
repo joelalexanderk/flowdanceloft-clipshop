@@ -211,6 +211,50 @@ assert.equal((await call('/p/99')).status, 404);             // nicht im Program
 assert.equal((await call('/p/4')).status, 200);
 assert.equal((await call('/p/hero')).status, 200);
 
+// ---------- Admin: zu tun, suchen, Link schicken, erstatten, löschen, Export ----------
+
+const adm = { authorization: 'Basic ' + btoa('joel:pw') }, hier = { ...adm, origin: HOST };
+html = await (await call('/admin', { headers: adm })).text();
+assert.ok(html.includes('Netto, geschätzt') && html.includes('<b>Video fehlt</b> · Nr. 01, 02, 03'));   // nur Nr. 4, 11, 14 haben Dateien
+assert.ok(html.includes('Zahlung offen') && html.includes('beides@beispiel.ch'));                          // offen, noch nicht bestätigt
+assert.ok(html.includes(`data-link="${HOST}/k/${t}"`));
+html = await (await call('/admin?q=FAMILIE', { headers: adm })).text();
+assert.ok(html.includes('1 Treffer') && html.includes('familie@beispiel.ch') && !html.includes('show@beispiel.ch</b>'));
+
+// Eine fremde Seite darf mit dem gespeicherten Passwort nichts auslösen.
+r = await call('/admin/aktion', { headers: { ...adm, origin: 'https://boese.example' }, form: { was: 'loeschen', id: t } });
+assert.equal(r.status, 403);
+r = await call('/admin/aktion', { headers: { ...adm, 'sec-fetch-site': 'cross-site' }, form: { was: 'loeschen', id: t } });
+assert.equal(r.status, 403);
+assert.equal((await call('/admin/aktion', { headers: { origin: HOST }, form: { was: 'loeschen', id: t } })).status, 401);
+assert.equal((await call(`/k/${t}`)).status, 200);
+
+n = gesendet.mails.length;
+r = await call('/admin/aktion', { headers: hier, form: { was: 'mail', id: t, q: 'familie' } });
+assert.equal(r.headers.get('location'), `${HOST}/admin?m=gesendet&q=familie`);
+assert.equal(gesendet.mails.length, n + 1);
+assert.ok(gesendet.mails.at(-1).text.includes(`${HOST}/k/${t}`));
+
+// Erstatten sperrt genau diese Zahlung und zählt nicht mehr zum Umsatz.
+assert.equal((await call(`/k/${t}/v/4`)).status, 200);
+r = await call('/admin/aktion', { headers: hier, form: { was: 'erstatten', id: '101' } });
+assert.equal(r.headers.get('location'), `${HOST}/admin?m=erstattet`);
+assert.equal((await call(`/k/${t}/v/4`)).status, 403);
+html = await (await call('/admin', { headers: adm })).text();
+assert.ok(html.includes('<b>CHF 35</b>Umsatz') && html.includes('erstattet'));   // 50 − 15
+
+r = await call('/admin/export.csv', { headers: adm });
+assert.equal(r.headers.get('content-type'), 'text/csv; charset=utf-8');
+assert.deepEqual([...new Uint8Array(await r.clone().arrayBuffer()).slice(0, 3)], [0xef, 0xbb, 0xbf]);   // BOM für Excel
+const csv = await r.text();
+assert.ok(csv.startsWith('"Datum";"E-Mail"') && csv.includes('"familie@beispiel.ch";"Nr. 04, Nr. 11";"15.00";"erstattet"'));
+assert.ok(csv.includes('"show@beispiel.ch";"ganze Show";"25.00";"bezahlt"'));
+assert.equal((await call('/admin/export.csv')).status, 401);
+
+r = await call('/admin/aktion', { headers: hier, form: { was: 'loeschen', id: t } });
+assert.equal(r.headers.get('location'), `${HOST}/admin?m=geloescht`);
+assert.equal((await call(`/k/${t}`)).status, 404);
+
 // Ohne Datei gibt es die ganze Show nicht zu kaufen.
 dateien.delete('2026/show.mp4');
 n = gesendet.payrexx.length;

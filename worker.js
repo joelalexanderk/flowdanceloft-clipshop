@@ -47,6 +47,8 @@ async function route(req, env) {
   if (post && p === '/link') return linkVergessen(req, env, url);
   if (post && p === '/webhook') return webhook(req, env, url);
   if (get && p === '/admin') return admin(req, env, url);
+  if (get && p === '/admin/export.csv') return adminExport(req, env, url);
+  if (post && p === '/admin/aktion') return adminAktion(req, env, url);
   if (get && p === '/p/hero')   // Bild vom Finale: oben auf der Startseite und als Standbild der ganzen Show
     return datei(env, req, `${SHOW.jahr}/hero.jpg`, 'image/jpeg', { 'cache-control': 'public, max-age=86400' });
   if (get && (m = /^\/p\/(\d+)$/.exec(p)) && clipByNr.has(+m[1]))
@@ -193,19 +195,21 @@ async function mail(env, an, betreff, text) {
   if (!r.ok) console.error('Resend', r.status, await r.text());
 }
 
+const linkMail = (env, origin, email, tokens) => mail(env, email, 'Dein Link zu den Clips von Flow Dance Loft', `Hallo
+
+Hier ist dein persönlicher Link zu deinen Clips:
+
+${tokens.map(t => `${origin}/k/${t}`).join('\n')}
+
+Flow Dance Loft`);
+
 async function linkVergessen(req, env, url) {
   const email = String((await req.formData()).get('email') || '').trim().toLowerCase();
   const ks = MAIL.test(email) ? (await env.DB.prepare(
     'SELECT token, mailed_at FROM buyers WHERE email = ? ORDER BY created_at DESC LIMIT 5').bind(email).all()).results : [];
   if (ks.length && !ks.some(k => k.mailed_at > now() - 600)) {   // höchstens alle 10 Minuten pro Adresse
     await env.DB.prepare('UPDATE buyers SET mailed_at = ? WHERE email = ?').bind(now(), email).run();
-    await mail(env, email, 'Dein Link zu den Clips von Flow Dance Loft', `Hallo
-
-Hier ist dein persönlicher Link zu deinen Clips:
-
-${ks.map(k => `${url.origin}/k/${k.token}`).join('\n')}
-
-Flow Dance Loft`);
+    await linkMail(env, url.origin, email, ks.map(k => k.token));
   }
   return weiter(url, '/?m=link');   // immer dieselbe Antwort: Niemand erfährt, wer gekauft hat
 }
@@ -241,7 +245,7 @@ async function kaufen(req, env, url, t) {
   const was = wahl.map(n => n === SHOWVIDEO ? 'ganze Show' : `Nr. ${n}`).join(', ');
   const gw = await gateway(env, url.origin, t, email, betrag, was);
   await env.DB.batch(wahl.map(n => env.DB.prepare(
-    'INSERT INTO purchases (token, clip, gateway_id, created_at) VALUES (?, ?, ?, ?)').bind(t, n, String(gw.id), now())));
+    'INSERT INTO purchases (token, clip, gateway_id, created_at, betrag) VALUES (?, ?, ?, ?, ?)').bind(t, n, String(gw.id), now(), betrag)));
   return new Response(null, { status: 303, headers: { location: gw.link, 'set-cookie': keks(url, t) } });
 }
 
@@ -465,43 +469,161 @@ async function video(req, env, url, t, nr) {
   });
 }
 
+// ---------- Admin ----------
+
+// Nur für die Schätzung «Netto»: Gebühr pro Zahlung. Payrexx TWINT 1.25 % + 18 Rp., Karte 1.65 % + 18 Rp.
+// RaiseNow: 2.5 % Plattform + 1.3 % TWINT. Beim Wechsel des Anbieters anpassen.
+const GEBUEHR = { prozent: 1.25, fix: 18 };
+const gebuehr = r => Math.round(r * GEBUEHR.prozent / 100) + GEBUEHR.fix;
+
+const STATUS = { confirmed: 'bezahlt', refunded: 'erstattet', waiting: 'offen' };
+const ADMIN_HINWEIS = {
+  bezahlt: 'Die Zahlung ist bestätigt, die Videos sind freigeschaltet.',
+  offen: 'Die Zahlung ist noch nicht bestätigt.',
+  gesendet: 'Der Link ist per Mail unterwegs.',
+  keinemail: 'Mails sind noch nicht eingerichtet. Kopiere den Link und schick ihn selbst.',
+  erstattet: 'Als erstattet markiert, der Zugang ist gesperrt. Das Geld zahlst du beim Zahlungsanbieter zurück.',
+  geloescht: 'Gelöscht, mit allen Käufen.',
+};
+const datum = s => new Date(s * 1000).toLocaleDateString('de-CH');
+const gekauft = hat => [...hat].sort((a, b) => a - b).map(n => n === SHOWVIDEO ? 'ganze Show' : `Nr. ${nr2(n)}`).join(', ');
+
+// Eine Zeile pro Zahlung, älteste zuerst. Der Betrag ist seit 07.10.2026 gespeichert, ältere Zahlungen
+// werden aus der Reihenfolge nachgerechnet.
+async function zahlungen(env) {
+  const rows = (await env.DB.prepare(
+    `SELECT p.gateway_id, p.token, b.email, MIN(p.status) AS status, MIN(p.created_at) AS am,
+            GROUP_CONCAT(p.clip) AS clips, MAX(p.betrag) AS betrag
+     FROM purchases p JOIN buyers b ON b.token = p.token GROUP BY p.gateway_id ORDER BY am`).all()).results;
+  const vorher = new Map();
+  for (const z of rows) {
+    const vor = vorher.get(z.token) ?? new Set();
+    z.hat = new Set(String(z.clips).split(',').map(Number));
+    z.betrag ??= gezahlt(new Set([...vor, ...z.hat])) - gezahlt(vor);
+    if (z.status === 'confirmed') vorher.set(z.token, new Set([...vor, ...z.hat]));
+  }
+  return rows;
+}
+
+const alter = s => s < 3600 ? `${Math.max(1, Math.round(s / 60))} Min.` : s < TAG ? `${Math.round(s / 3600)} Std.` : `${Math.round(s / TAG)} Tagen`;
+
 async function admin(req, env, url) {
   if (!basicOk(req, env.ADMIN_PASSWORD)) return passwort();
   const off = (await env.DB.prepare(
     "SELECT DISTINCT gateway_id FROM purchases WHERE status = 'waiting' AND created_at > ? LIMIT 20").bind(now() - 7 * TAG).all()).results;
   for (const r of off) await settle(env, url.origin, r.gateway_id).catch(e => console.error(e));
-  const rows = (await env.DB.prepare(
-    `SELECT b.token, b.email, b.created_at, GROUP_CONCAT(p.clip) AS clips, COUNT(*) AS n
-     FROM buyers b JOIN purchases p ON p.token = b.token WHERE p.status = 'confirmed'
-     GROUP BY b.token ORDER BY b.created_at DESC`).all()).results;
-  const kaeufe = rows.map(r => ({ ...r, hat: new Set(String(r.clips).split(',').map(Number)) }));
+
+  const alle = await zahlungen(env), da = await vorhanden(env), q = (url.searchParams.get('q') || '').trim().toLowerCase();
+  const bez = alle.filter(z => z.status === 'confirmed');
+  const umsatz = bez.reduce((s, z) => s + z.betrag, 0), netto = umsatz - bez.reduce((s, z) => s + gebuehr(z.betrag), 0);
   const proNr = new Map();
-  for (const k of kaeufe) for (const n of k.hat) proNr.set(n, (proNr.get(n) || 0) + 1);
-  const umsatz = kaeufe.reduce((s, k) => s + gezahlt(k.hat), 0), shows = proNr.get(SHOWVIDEO) || 0;
-  const clips = kaeufe.reduce((s, k) => s + k.hat.size - k.hat.has(SHOWVIDEO), 0);
-  const was = n => n === SHOWVIDEO ? 'Show' : nr2(n);
+  for (const z of bez) for (const n of z.hat) proNr.set(n, (proNr.get(n) || 0) + 1);
+  const clips = bez.reduce((s, z) => s + z.hat.size - z.hat.has(SHOWVIDEO), 0);
+
+  const aktion = (was, id, text, frage) => `<form method="post" action="/admin/aktion"${frage ? ` onsubmit="return confirm('${frage}')"` : ''}>
+      <input type="hidden" name="was" value="${was}"><input type="hidden" name="id" value="${esc(id)}"><input type="hidden" name="q" value="${esc(q)}">
+      <button class="a${was === 'loeschen' ? ' rot' : ''}">${text}</button></form>`;
+
+  // Zu tun: offene Zahlungen, fehlende Dateien, was noch nicht eingerichtet ist
+  const fehlt = (was, cs) => cs.length ? [`<li><span><b>${was}</b> · ${cs.length === 1 ? `Nr. ${nr2(cs[0].nr)} ${esc(cs[0].titel)}` : `Nr. ${cs.map(c => nr2(c.nr)).join(', ')}`}</span></li>`] : [];
+  const tun = [
+    ...alle.filter(z => z.status === 'waiting' && z.am > now() - 7 * TAG).reverse().map(z => `<li><span><b>Zahlung offen</b> · ${esc(z.email)} · ${gekauft(z.hat)} · ${chf(z.betrag)} · seit ${alter(now() - z.am)}</span>
+      ${z.gateway_id.startsWith('demo-') ? '<small>Demo</small>' : aktion('pruefen', z.gateway_id, 'Zahlung prüfen')}</li>`),
+    ...(da.has(key(SHOWVIDEO, 'mp4')) ? [] : ['<li><span><b>Ganze Show fehlt</b> · auf der Startseite steht «folgt»</span></li>']),
+    ...fehlt('Video fehlt', CLIPS.filter(c => !da.has(key(c.nr, 'mp4')))),
+    ...fehlt('Standbild fehlt', CLIPS.filter(c => da.has(key(c.nr, 'mp4')) && !da.has(key(c.nr, 'jpg')))),
+    ...(env.PAYREXX_API_KEY ? [] : ['<li><span><b>Demo-Modus</b> · Zahlungen sind nicht echt, der Zahlungsanbieter ist noch nicht verbunden</span></li>']),
+    ...(env.RESEND_API_KEY ? [] : ['<li><span><b>Mails noch nicht eingerichtet</b> · Links nur über «Link kopieren» weitergeben</span></li>']),
+    ...(env.CONTACT_EMAIL ? [] : ['<li><span><b>Kontaktadresse fehlt</b> · im Fuss der Seite steht keine E-Mail-Adresse für Fragen</span></li>']),
+  ];
+
+  const liste = alle.filter(z => z.status !== 'waiting' && (!q || z.email.includes(q))).reverse();
+  const m = url.searchParams.get('m');
   return seite('Verkäufe · Flow Dance Loft Clips', `${kopfzeile()}
 <main class="admin">
   <section class="sect wrap">
     ${kopf('Verkäufe', 'Übersicht.')}
-    <div class="kpi"><div><b>${chf(umsatz)}</b>Umsatz vor Gebühren</div><div><b>${shows}</b>Ganze Show</div><div><b>${clips}</b>Einzelne Clips</div></div>
+    ${Object.hasOwn(ADMIN_HINWEIS, m ?? '') ? `<p class="note">${ADMIN_HINWEIS[m]}</p>` : ''}
+    <div class="kpi"><div><b>${chf(umsatz)}</b>Umsatz</div><div><b>${chf(netto)}</b>Netto, geschätzt</div><div><b>${bez.length}</b>Käufe</div></div>
+    <p class="tip">${proNr.get(SHOWVIDEO) || 0} × ganze Show, ${clips} einzelne Clips. Netto heisst nach den geschätzten Gebühren des Zahlungsanbieters.</p>
   </section>
   <section class="sect wrap">
-    <p class="label">Was gekauft wurde</p>
-    <table><tr><th>Nr.</th><th>Titel</th><th>Verkauft</th></tr>
-      ${[...proNr].sort((a, b) => b[1] - a[1] || a[0] - b[0]).map(([n, c]) =>
-        `<tr><td>${was(n)}</td><td>${n === SHOWVIDEO ? 'Die ganze Show als ein Video' : esc(clipByNr.get(n)?.titel ?? '')}</td><td>${c}</td></tr>`).join('') || '<tr><td colspan="3">Noch keine Verkäufe.</td></tr>'}
-    </table>
+    <p class="label">Zu tun</p>
+    <ul class="tun">${tun.join('') || '<li class="ok"><span>Alles erledigt.</span></li>'}</ul>
   </section>
   <section class="sect wrap">
     <p class="label">Käufe</p>
-    <div class="scroll"><table><tr><th>Datum</th><th>E-Mail</th><th>Gekauft</th><th>Betrag</th><th>Link</th></tr>
-      ${kaeufe.map(k => `<tr><td>${new Date(k.created_at * 1000).toLocaleDateString('de-CH')}</td><td>${esc(k.email)}</td>
-        <td>${[...k.hat].sort((a, b) => a - b).map(was).join(', ')}</td><td>${chf(gezahlt(k.hat))}</td>
-        <td><a href="/k/${k.token}">öffnen</a></td></tr>`).join('')}
-    </table></div>
+    <form class="inline" method="get" action="/admin">
+      <label for="q">E-Mail-Adresse suchen</label>
+      <input id="q" name="q" type="search" value="${esc(q)}" placeholder="familie@beispiel.ch" autocomplete="off">
+      <button class="btn dark">Suchen</button>
+    </form>
+    ${q ? `<p class="tip">${liste.length} Treffer für «${esc(q)}». <a href="/admin">Alle zeigen</a></p>` : ''}
+    <div class="kaeufe">${liste.map(z => `<article class="kauf${z.status === 'refunded' ? ' weg' : ''}">
+      <div class="k1"><b>${esc(z.email)}</b><span>${chf(z.betrag)}</span></div>
+      <div class="k2">${datum(z.am)} · ${gekauft(z.hat)} · ${STATUS[z.status]}</div>
+      <div class="k3">
+        <button type="button" class="a dark" data-link="${url.origin}/k/${z.token}">Link kopieren</button>
+        <a class="a" href="/k/${z.token}">Öffnen</a>
+        ${aktion('mail', z.token, 'Link schicken')}
+        ${z.status === 'confirmed' ? aktion('erstatten', z.gateway_id, 'Erstatten', 'Als erstattet markieren? Der Zugang zu diesen Videos wird gesperrt.') : ''}
+        ${aktion('loeschen', z.token, 'Löschen', 'Löschen, mit allen Käufen dieser Person? Das lässt sich nicht rückgängig machen.')}
+      </div>
+    </article>`).join('') || `<p class="tip">${q ? 'Nichts gefunden.' : 'Noch keine Käufe.'}</p>`}</div>
+    <p class="tip"><a href="/admin/export.csv">Alle Käufe als CSV herunterladen</a>, etwa für die Buchhaltung.</p>
   </section>
-</main>`);
+  <section class="sect wrap">
+    <p class="label">Pro Nummer</p>
+    <table><tr><th>Nr.</th><th>Titel</th><th>Verkauft</th></tr>
+      <tr><td>Show</td><td>Die ganze Show als ein Video</td><td>${proNr.get(SHOWVIDEO) || 0}</td></tr>
+      ${CLIPS.map(c => `<tr${proNr.get(c.nr) ? '' : ' class="null"'}><td>${nr2(c.nr)}</td><td>${esc(c.titel)}</td><td>${proNr.get(c.nr) || 0}</td></tr>`).join('')}
+    </table>
+  </section>
+</main>
+<script>
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-link]');
+  if (!b) return;
+  const fertig = () => { b.textContent = 'Kopiert'; setTimeout(() => b.textContent = 'Link kopieren', 1500); };
+  navigator.clipboard ? navigator.clipboard.writeText(b.dataset.link).then(fertig, () => prompt('Link', b.dataset.link)) : prompt('Link', b.dataset.link);
+});
+</script>`);
+}
+
+async function adminAktion(req, env, url) {
+  if (!basicOk(req, env.ADMIN_PASSWORD)) return passwort();
+  // Nur aus dem Admin selbst: Eine fremde Seite darf mit dem gespeicherten Passwort nichts auslösen.
+  const o = req.headers.get('origin');
+  if ((o && o !== url.origin) || req.headers.get('sec-fetch-site') === 'cross-site') return new Response('Nicht erlaubt', { status: 403 });
+  const f = await req.formData(), was = f.get('was'), id = String(f.get('id') || ''), q = String(f.get('q') || '');
+  let m = '';
+  if (was === 'pruefen') {
+    await settle(env, url.origin, id).catch(e => console.error(e));
+    const z = await env.DB.prepare('SELECT status FROM purchases WHERE gateway_id = ? LIMIT 1').bind(id).first();
+    m = z?.status === 'confirmed' ? 'bezahlt' : 'offen';
+  } else if (was === 'mail' && UUID.test(id) && await kaeufer(env, id)) {
+    await linkMail(env, url.origin, (await kaeufer(env, id)).email, [id]);
+    m = env.RESEND_API_KEY ? 'gesendet' : 'keinemail';
+  } else if (was === 'erstatten') {
+    await env.DB.prepare("UPDATE purchases SET status = 'refunded' WHERE gateway_id = ? AND status = 'confirmed'").bind(id).run();
+    m = 'erstattet';
+  } else if (was === 'loeschen' && UUID.test(id)) {
+    await env.DB.batch([env.DB.prepare('DELETE FROM purchases WHERE token = ?').bind(id), env.DB.prepare('DELETE FROM buyers WHERE token = ?').bind(id)]);
+    m = 'geloescht';
+  }
+  return weiter(url, `/admin?m=${m}${q ? `&q=${encodeURIComponent(q)}` : ''}`);
+}
+
+async function adminExport(req, env, url) {
+  if (!basicOk(req, env.ADMIN_PASSWORD)) return passwort();
+  // Semikolon und BOM für Excel in der Schweiz. Ein = oder + am Anfang würde Excel als Formel lesen.
+  const zelle = v => `"${String(v).replace(/^([=+\-@\t\r])/, "'$1").replace(/"/g, '""')}"`;
+  const zeilen = [['Datum', 'E-Mail', 'Gekauft', 'Betrag CHF', 'Status', 'Link'],
+    ...(await zahlungen(env)).filter(z => z.status !== 'waiting').map(z =>
+      [datum(z.am), z.email, gekauft(z.hat), (z.betrag / 100).toFixed(2), STATUS[z.status], `${url.origin}/k/${z.token}`])];
+  return new Response('﻿' + zeilen.map(r => r.map(zelle).join(';')).join('\r\n'), { headers: {
+    'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store',
+    'content-disposition': `attachment; filename="FlowDanceLoft_Verkaeufe_${SHOW.jahr}.csv"` } });
 }
 
 const nichtGefunden = () => seite('Nicht gefunden', `${kopfzeile()}
@@ -691,6 +813,24 @@ body:has(.shop :checked) .foot { padding-bottom: 170px; }
 .wordmark { margin: 30px 0 -.07em; font: 900 clamp(40px, 13.4vw, 122px)/.76 var(--display); text-transform: uppercase; white-space: nowrap; color: var(--paper); }
 
 .admin { padding-bottom: 70px; }
+.tun { list-style: none; margin-top: 10px; border-top: var(--b); }
+.tun li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: var(--b); color: var(--ink); font-size: 14.5px; }
+.tun li.ok { color: var(--teal-ink); font-weight: 500; }
+.tun small { font: 700 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.kaeufe { margin-top: 18px; border-top: var(--b); }
+.kauf { padding: 14px 0; border-bottom: var(--b); }
+.kauf.weg { opacity: .5; }
+.k1 { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--ink); overflow-wrap: anywhere; }
+.k1 span { font: 900 24px/1 var(--display); white-space: nowrap; }
+.k2 { margin-top: 4px; font-size: 13.5px; color: var(--mute); }
+.k3 { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.k3 form { display: contents; }
+.a { display: inline-flex; align-items: center; min-height: 40px; padding: 0 12px; border: var(--b); border-radius: 8px; background: var(--card);
+     color: var(--ink); font: 700 11.5px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.a.dark { background: var(--ink); color: var(--paper); }
+.a.rot { border-color: #B3261E; color: #B3261E; }
+.k3 form:last-child .a { margin-left: auto; }
+tr.null td { color: var(--mute); }
 .kpi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
 .kpi div { background: var(--aqua); color: var(--ink); border: var(--b); border-radius: var(--r); box-shadow: var(--shadow); padding: 14px 12px 12px;
            font: 700 11px/1.35 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
