@@ -45,6 +45,7 @@ async function route(req, env) {
   if (post && p === '/buy') return kaufen(req, env, url);
   if (get && p === '/neu') return weiter(url, '/', { 'set-cookie': keks(url, '', 0) });
   if (post && p === '/link') return linkVergessen(req, env, url);
+  if (get && p === '/bedingungen') return bedingungen(env);
   if (post && p === '/webhook') return webhook(req, env, url);
   if (get && p === '/admin') return admin(req, env, url);
   if (get && p === '/admin/export.csv') return adminExport(req, env, url);
@@ -375,7 +376,7 @@ const fuss = env => `<footer class="foot"><div class="wrap">
   <p><b>Flow Dance Loft GmbH</b> · Zelgli 3 · 5452 Oberrohrdorf${env.CONTACT_EMAIL
     ? ` · <a href="mailto:${esc(env.CONTACT_EMAIL)}">${esc(env.CONTACT_EMAIL)}</a>` : ''}</p>
   <p>Die Clips sind digitale Inhalte und nach der Zahlung sofort verfügbar. Sie sind für den privaten Gebrauch bestimmt, bitte nicht weitergeben oder veröffentlichen.</p>
-  <p>Gespeichert wird nur deine E-Mail-Adresse, damit du deinen Link wieder bekommst. Technik: Seismos Media.</p>
+  <p>Verkauf: Flow Dance Loft. Technik: Seismos Media, im Auftrag von Flow Dance Loft. <a href="/bedingungen">Bedingungen und Datenschutz</a></p>
   <div class="wordmark" aria-hidden="true">Flow Dance Loft</div>
 </div></footer>`;
 
@@ -415,6 +416,7 @@ function auswahl(action, clips, da, hat, mitMail, zwischen) {
     ${mitMail ? '<label for="mail">E-Mail für deinen Link</label><input id="mail" type="email" name="email" required autocomplete="email" placeholder="familie@beispiel.ch">' : ''}
     <div class="bar-r"><div><div class="bar-l" aria-live="polite"></div><div class="bar-p"></div></div>
       <button class="btn">Bezahlen ${ICON.pfeil}</button></div>
+    <p class="bar-a">Mit «Bezahlen» akzeptierst du die <a href="/bedingungen" target="_blank">Bedingungen</a>.</p>
   </div>
 </form>
 <script>
@@ -525,6 +527,81 @@ async function video(req, env, url, t, nr) {
   });
 }
 
+// Wer verkauft, wer ausliefert, was gilt. Entwurf vom 07.10.2026, Taryn gibt den Text frei (Projektübersicht).
+// Seismos-Adresse aus brand.FIRMA in den Vorlagen.
+function bedingungen(env) {
+  const mail = env.CONTACT_EMAIL && `<a href="mailto:${esc(env.CONTACT_EMAIL)}">${esc(env.CONTACT_EMAIL)}</a>`;
+  const melden = mail ? `Schreib Flow Dance Loft an ${mail}` : 'Melde dich bei Flow Dance Loft';
+  return seite('Bedingungen · Flow Dance Loft Clips', `${kopfzeile()}
+<main>
+  <section class="sect wrap">
+    ${kopf('Bedingungen', '& Datenschutz.')}
+    <p class="lead">Kurz und offen: wer hinter diesem Shop steht, was du kaufst und was mit deinen Daten passiert.</p>
+    <div class="duo">
+      <div><p class="label">Verkauft</p><h3>Flow Dance Loft</h3>
+        <p>Der Shop gehört Flow Dance Loft. Flow Dance Loft verkauft die Videos, bekommt das Geld und ist deine Ansprechpartnerin, auch für die Rechte an Musik und Bild.</p>
+        <p class="adr">Flow Dance Loft GmbH · Zelgli 3 · 5452 Oberrohrdorf${mail ? ` · ${mail}` : ''}</p></div>
+      <div><p class="label">Liefert aus</p><h3>Seismos Media</h3>
+        <p>Seismos Media hat die Show gefilmt und betreibt den Shop technisch im Auftrag von Flow Dance Loft: Webseite, Videos und Mails. Darum steht «seismos.ch» in der Adresse, und die Mails kommen von clips@seismos.ch.</p>
+        <p>Dafür bekommt Seismos Media von Flow Dance Loft eine feste Pauschale. Am Verkauf der Videos verdient Seismos Media nichts mit.</p>
+        <p class="adr">Seismos Media by J. Król · Seefeldstrasse 181 · 8008 Zürich</p></div>
+    </div>
+  </section>
+  <section class="sect wrap">
+    <p class="label">Kaufbedingungen</p>
+    <h2>Der <em>Kauf.</em></h2>
+    <div class="prose">
+      <h3>Was du kaufst</h3>
+      <p>Videos der Show «${esc(SHOW.name)}» ${SHOW.jahr} in Full HD: einzelne Nummern als Clips oder die ganze Show als ein langes Video. Die ganze Show ist ein eigener Artikel, die Clips sind darin nicht als einzelne Dateien dabei. Nr. 4 und 5 tanzen zusammen und sind ein Clip.</p>
+      <h3>Preise</h3>
+      <p>1 Clip ${chf(PREIS_1)}, 2 Clips ${chf(PREIS_2)}, jedes weitere Paar wieder ${chf(PREIS_2)}. Den Paarpreis gibt es auch beim Nachkaufen: Hast du schon einen Clip, kostet der zweite ${chf(PREIS_2 - PREIS_1)}. Die ganze Show kostet ${chf(PREIS_SHOW)}. Alle Preise sind Endpreise in Schweizer Franken.</p>
+      <h3>So läuft der Kauf</h3>
+      <ol>
+        <li>Du wählst die Videos aus und gibst deine E-Mail-Adresse an.</li>
+        <li>Du bezahlst auf der Zahlseite von Payrexx mit TWINT oder Karte. Bis dahin kannst du die Auswahl ändern oder abbrechen. Das Geld geht direkt an Flow Dance Loft.</li>
+        <li>Sobald die Zahlung bestätigt ist, sind die Videos freigeschaltet. Du landest auf deiner persönlichen Seite und bekommst den Link zusätzlich per E-Mail.</li>
+      </ol>
+      <h3>Kein Konto, ein Link</h3>
+      <p>Es gibt kein Login. Dein persönlicher Link ist der Schlüssel zu deinen Videos: Wer ihn hat, kann sie ansehen. Gib ihn darum nicht weiter. Hast du ihn verloren, bekommst du ihn auf der Startseite unter «Schon gekauft?» noch einmal.</p>
+      <h3>Wie lange</h3>
+      <p>Die Videos bleiben ohne Ablaufdatum online. Lade sie trotzdem herunter und bewahre sie selbst auf, dann hast du sie auch, falls die Seite einmal nicht erreichbar ist.</p>
+      <h3>Nur privat</h3>
+      <p>Die Videos sind für dich und deine Familie. Mit Familie und Freunden anschauen ist in Ordnung. Nicht erlaubt ist, sie zu veröffentlichen, weiterzugeben oder zu verkaufen, also etwa auf Instagram, TikTok, YouTube, im WhatsApp-Status oder im Klassenchat. Der Grund: Auf den Videos tanzen auch andere Kinder, und die Musik gehört nicht uns.</p>
+      <h3>Wenn etwas nicht stimmt</h3>
+      <p>Die Videos sind digital und sofort verfügbar, darum gibt es kein Rückgaberecht. Funktioniert ein Video nicht oder hast du aus Versehen doppelt bezahlt, ${melden.charAt(0).toLowerCase() + melden.slice(1)}. Flow Dance Loft findet eine Lösung oder zahlt den Betrag zurück. Es gilt Schweizer Recht.</p>
+    </div>
+  </section>
+  <section class="sect wrap">
+    <p class="label">Datenschutz</p>
+    <h2>Deine <em>Daten.</em></h2>
+    <div class="prose">
+      <h3>Verantwortlich</h3>
+      <p>Flow Dance Loft GmbH, Zelgli 3, 5452 Oberrohrdorf. Seismos Media bearbeitet die Daten im Auftrag von Flow Dance Loft.</p>
+      <h3>Was gespeichert wird</h3>
+      <p>Deine E-Mail-Adresse, was du gekauft hast, wann und zu welchem Betrag, und ob die Zahlung bestätigt ist. Mehr nicht. Deine Karten- oder TWINT-Angaben gibst du direkt bei Payrexx ein, dieser Shop bekommt sie nie.</p>
+      <h3>Wofür</h3>
+      <p>Damit du deine Videos bekommst und den Link wieder anfordern kannst, für Rückfragen und für die Buchhaltung. Du bekommst nur Mails zu deinem Kauf: die Bestätigung und den Link, wenn du ihn anforderst. Kein Newsletter, keine Werbung.</p>
+      <h3>Wer die Daten sieht</h3>
+      <p>Flow Dance Loft und, für den Betrieb, Seismos Media. Deine Daten werden weder verkauft noch für etwas anderes verwendet. Dazu kommen drei Dienstleister:</p>
+      <ul>
+        <li><b>Payrexx AG</b>, Thun, Schweiz: wickelt die Zahlung ab. Für deine Zahlungsangaben gilt die Datenschutzerklärung von Payrexx.</li>
+        <li><b>Cloudflare, Inc.</b>, USA: betreibt die Webseite und speichert Datenbank und Videos in Westeuropa. Beim Aufruf der Seite verarbeitet Cloudflare technisch nötige Daten wie deine IP-Adresse, auch ausserhalb Europas.</li>
+        <li><b>Resend, Inc.</b>, USA: verschickt die Mails über Server in Irland.</li>
+      </ul>
+      <p>Für Übermittlungen in die USA gelten die Standardvertragsklauseln in den Datenschutzverträgen dieser Anbieter.</p>
+      <h3>Cookie</h3>
+      <p>Ein einziges Cookie merkt sich deinen persönlichen Link auf diesem Gerät, damit du direkt bei deinen Videos landest. Es gilt ein Jahr. Keine Werbe- oder Analyse-Cookies, kein Tracking, die Schriften liegen auf diesem Server. Auf deiner persönlichen Seite löscht «Nicht dein Gerät?» das Cookie.</p>
+      <h3>Wie lange</h3>
+      <p>Solange deine Videos online sind, denn ohne diese Angaben funktioniert dein Link nicht. Was die Buchhaltung braucht, bewahrt Flow Dance Loft so lange auf, wie es das Gesetz verlangt.</p>
+      <h3>Deine Rechte</h3>
+      <p>Du kannst jederzeit fragen, was über dich gespeichert ist, und es berichtigen oder löschen lassen. ${melden}. Nach dem Löschen funktioniert dein Link nicht mehr, lade die Videos also vorher herunter.</p>
+    </div>
+    <p class="tip">Stand: Oktober 2026</p>
+  </section>
+</main>
+${fuss(env)}`);
+}
+
 // ---------- Admin ----------
 
 // Nur für die Schätzung «Netto»: Gebühr pro Zahlung. Payrexx TWINT 1.25 % + 18 Rp., Karte 1.65 % + 18 Rp.
@@ -540,9 +617,12 @@ const ADMIN_HINWEIS = {
   keinemail: 'Mails sind noch nicht eingerichtet. Kopiere den Link und schick ihn selbst.',
   erstattet: 'Als erstattet markiert, der Zugang ist gesperrt. Das Geld zahlst du beim Zahlungsanbieter zurück.',
   geloescht: 'Gelöscht, mit allen Käufen.',
+  gratis: 'Volunteer-Link erstellt, er steht bei den Käufen. «Link kopieren» und an die Volunteers schicken.',
 };
 const datum = s => new Date(s * 1000).toLocaleDateString('de-CH');
 const gekauft = hat => [...hat].sort((a, b) => a - b).map(n => n === SHOWVIDEO ? 'ganze Show' : `Nr. ${nr2(n)}`).join(', ');
+// Volunteer-Link: alles freigeschaltet, Betrag 0. Zählt nicht zum Umsatz und nicht in den Export.
+const gratis = z => z.gateway_id.startsWith('gratis-');
 
 // Eine Zeile pro Zahlung, älteste zuerst. Der Betrag ist seit 07.10.2026 gespeichert, ältere Zahlungen
 // werden aus der Reihenfolge nachgerechnet.
@@ -570,7 +650,7 @@ async function admin(req, env, url) {
   for (const r of off) await settle(env, url.origin, r.gateway_id).catch(e => console.error(e));
 
   const alle = await zahlungen(env), da = await vorhanden(env), q = (url.searchParams.get('q') || '').trim().toLowerCase();
-  const bez = alle.filter(z => z.status === 'confirmed');
+  const bez = alle.filter(z => z.status === 'confirmed' && !gratis(z));
   const umsatz = bez.reduce((s, z) => s + z.betrag, 0), netto = umsatz - bez.reduce((s, z) => s + gebuehr(z.betrag), 0);
   const proNr = new Map();
   for (const z of bez) for (const n of z.hat) proNr.set(n, (proNr.get(n) || 0) + 1);
@@ -617,16 +697,18 @@ async function admin(req, env, url) {
     ${q ? `<p class="tip">${liste.length} Treffer für «${esc(q)}». <a href="/admin">Alle zeigen</a></p>` : ''}
     <div class="kaeufe">${liste.map(z => `<article class="kauf${z.status === 'refunded' ? ' weg' : ''}">
       <div class="k1"><b>${esc(z.email)}</b><span>${chf(z.betrag)}</span></div>
-      <div class="k2">${datum(z.am)} · ${gekauft(z.hat)} · ${STATUS[z.status]}</div>
+      <div class="k2">${datum(z.am)} · ${gratis(z) ? 'alles gratis' : `${gekauft(z.hat)} · ${STATUS[z.status]}`}</div>
       <div class="k3">
         <button type="button" class="a dark" data-link="${url.origin}/k/${z.token}">Link kopieren</button>
         <a class="a" href="/k/${z.token}">Öffnen</a>
-        ${aktion('mail', z.token, 'Link schicken')}
-        ${z.status === 'confirmed' ? aktion('erstatten', z.gateway_id, 'Erstatten', 'Als erstattet markieren? Der Zugang zu diesen Videos wird gesperrt.') : ''}
+        ${gratis(z) ? '' : aktion('mail', z.token, 'Link schicken')}
+        ${z.status === 'confirmed' && !gratis(z) ? aktion('erstatten', z.gateway_id, 'Erstatten', 'Als erstattet markieren? Der Zugang zu diesen Videos wird gesperrt.') : ''}
         ${aktion('loeschen', z.token, 'Löschen', 'Löschen, mit allen Käufen dieser Person? Das lässt sich nicht rückgängig machen.')}
       </div>
     </article>`).join('') || `<p class="tip">${q ? 'Nichts gefunden.' : 'Noch keine Käufe.'}</p>`}</div>
     <p class="tip"><a href="/admin/export.csv">Alle Käufe als CSV herunterladen</a>, etwa für die Buchhaltung.</p>
+    <div class="inline">${aktion('gratis', '', 'Volunteer-Link erstellen')}</div>
+    <p class="tip">Ein Link, auf dem alle Videos gratis freigeschaltet sind. Sperren mit «Löschen».</p>
   </section>
   <section class="sect wrap">
     <p class="label">Pro Nummer</p>
@@ -666,6 +748,16 @@ async function adminAktion(req, env, url) {
   } else if (was === 'loeschen' && UUID.test(id)) {
     await env.DB.batch([env.DB.prepare('DELETE FROM purchases WHERE token = ?').bind(id), env.DB.prepare('DELETE FROM buyers WHERE token = ?').bind(id)]);
     m = 'geloescht';
+  } else if (was === 'gratis') {
+    // Ein gewöhnlicher Schlüssel, auf dem jedes Video im Bucket als bezahlt steht, mit Betrag 0.
+    // ponytail: Videos, die später hochgeladen werden, fehlen in alten Links. Dann einen neuen Link erstellen.
+    const t = crypto.randomUUID(), da = await vorhanden(env);
+    await env.DB.batch([
+      env.DB.prepare('INSERT INTO buyers (token, email, created_at) VALUES (?, ?, ?)').bind(t, 'Volunteers', now()),
+      ...[SHOWVIDEO, ...CLIPS.map(c => c.nr)].filter(n => da.has(key(n, 'mp4'))).map(n => env.DB.prepare(
+        "INSERT INTO purchases (token, clip, gateway_id, status, created_at, betrag) VALUES (?, ?, ?, 'confirmed', ?, 0)").bind(t, n, `gratis-${t}`, now())),
+    ]);
+    m = 'gratis';
   }
   return weiter(url, `/admin?m=${m}${q ? `&q=${encodeURIComponent(q)}` : ''}`);
 }
@@ -675,7 +767,7 @@ async function adminExport(req, env, url) {
   // Semikolon und BOM für Excel in der Schweiz. Ein = oder + am Anfang würde Excel als Formel lesen.
   const zelle = v => `"${String(v).replace(/^([=+\-@\t\r])/, "'$1").replace(/"/g, '""')}"`;
   const zeilen = [['Datum', 'E-Mail', 'Gekauft', 'Betrag CHF', 'Status', 'Link'],
-    ...(await zahlungen(env)).filter(z => z.status !== 'waiting').map(z =>
+    ...(await zahlungen(env)).filter(z => z.status !== 'waiting' && !gratis(z)).map(z =>
       [datum(z.am), z.email, gekauft(z.hat), (z.betrag / 100).toFixed(2), STATUS[z.status], `${url.origin}/k/${z.token}`])];
   return new Response('﻿' + zeilen.map(r => r.map(zelle).join(';')).join('\r\n'), { headers: {
     'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store',
@@ -703,8 +795,10 @@ ${refresh ? `<meta http-equiv="refresh" content="3;url=${esc(refresh)}">` : ''}
 ${body}
 </body>
 </html>`, { status, headers: {
+    // same-origin: Der Schlüssel in /k/… geht nie an fremde Seiten. Nicht no-referrer: Dann schicken Browser
+    // bei Formularen «Origin: null», und adminAktion sperrt jeden Knopf im Admin.
     'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store',
-    'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex', ...headers } });
+    'referrer-policy': 'same-origin', 'x-robots-tag': 'noindex', ...headers } });
 }
 
 // Look: Farben und Logo aus der CI von flowdance.ch (Türkis, helles Aqua, warmes Dunkelgrau, Weiss).
@@ -834,6 +928,8 @@ html { scroll-behavior: smooth; scroll-padding-top: 16px; }
 .bar-r { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 0 0 4px; }
 .bar-p { margin-top: 4px; font: 900 34px/1 var(--display); color: var(--aqua); }
 .bar .btn { box-shadow: none; }
+.bar-a { padding-left: 4px; font-size: 12px; line-height: 1.3; color: #CFCECA; }
+.bar-a a { color: var(--paper); }
 
 .notiz { position: relative; margin: 30px 4px 0; transform: rotate(-1deg); background: var(--aqua); color: var(--ink); border: var(--b);
          border-radius: 6px; padding: 20px 16px 16px; box-shadow: var(--shadow); }
@@ -862,10 +958,25 @@ html { scroll-behavior: smooth; scroll-padding-top: 16px; }
 
 .foot { margin-top: 0; padding-top: 38px; overflow: hidden; background: var(--dark); color: #E4E3DF; font-size: 13.5px; line-height: 1.6; }
 main:not(:has(.block)) + .foot { margin-top: 64px; }
-body:has(.shop :checked) .foot { padding-bottom: 170px; }
+body:has(.shop :checked) .foot { padding-bottom: 195px; }
 .foot .label { color: var(--aqua); }
 .foot p { margin-top: 10px; max-width: 46em; }
 .foot b { color: #fff; font-weight: 500; }
+.foot a { color: #fff; }
+
+/* Bedingungen: zwei Karten «verkauft / liefert aus», darunter Fliesstext */
+.duo { display: grid; gap: 22px; margin-top: 30px; }
+.duo > div { background: var(--card); color: var(--ink); border: var(--b); border-radius: var(--r); box-shadow: var(--shadow); padding: 18px 16px; }
+.duo > div:first-child { background: var(--aqua); }
+.duo .label { color: var(--ink); }
+.duo h3 { margin-top: 4px; font: 900 36px/1 var(--display); text-transform: uppercase; }
+.duo p:not(.label) { margin-top: 10px; font-size: 15px; }
+.duo .adr { padding-top: 10px; border-top: var(--b); font-size: 13px; overflow-wrap: anywhere; }
+.prose { max-width: 40em; color: var(--ink); }
+.prose h3 { margin-top: 28px; font: 800 26px/1.05 var(--display); text-transform: uppercase; }
+.prose p, .prose ol, .prose ul { margin-top: 8px; }
+.prose ol, .prose ul { padding-left: 22px; }
+.prose li + li { margin-top: 6px; }
 .wordmark { margin: 30px 0 -.07em; font: 900 clamp(40px, 13.4vw, 122px)/.76 var(--display); text-transform: uppercase; white-space: nowrap; color: var(--paper); }
 
 .admin { padding-bottom: 70px; }
@@ -940,6 +1051,7 @@ body.pay { background: #fff; color: var(--ink); }
   .txt small { font-size: 14.5px; }
   .clips { grid-template-columns: 1fr 1fr; }
   .clip.gross { grid-column: 1 / -1; }
+  .duo { grid-template-columns: 1fr 1fr; }
 }
 @media (min-width: 960px) {   /* Text bleibt in der Spalte, das Bild wächst nach rechts hinaus */
   .hero { grid-template-columns: 420px minmax(0, 720px); max-width: none; margin-left: max(0px, (100% - 860px) / 2); padding-right: 40px; }

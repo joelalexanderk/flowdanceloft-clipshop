@@ -252,6 +252,24 @@ assert.ok(csv.startsWith('"Datum";"E-Mail"') && csv.includes('"familie@beispiel.
 assert.ok(csv.includes('"show@beispiel.ch";"ganze Show";"25.00";"bezahlt"'));
 assert.equal((await call('/admin/export.csv')).status, 401);
 
+// Volunteer-Link: alles gratis freigeschaltet, zählt nicht zum Umsatz und nicht in den Export.
+r = await call('/admin/aktion', { headers: hier, form: { was: 'gratis' } });
+assert.equal(r.headers.get('location'), `${HOST}/admin?m=gratis`);
+html = await (await call('/admin', { headers: adm })).text();
+const vol = /<b>Volunteers<\/b>[\s\S]*?data-link="[^"]*\/k\/([0-9a-f-]{36})"/.exec(html)[1];
+assert.ok(html.includes('<b>CHF 35</b>Umsatz') && html.includes('alles gratis'));
+for (const nr of [0, 4, 11, 14]) assert.equal((await call(`/k/${vol}/v/${nr}`, { headers: { range: 'bytes=0-1' } })).status, 206);
+assert.equal((await call(`/k/${vol}/v/13`)).status, 403);                                // keine Datei, nicht freigeschaltet
+html = await (await call(`/k/${vol}`)).text();
+assert.ok(html.includes(`/k/${vol}/v/0"`) && !html.includes('name="clip"'));          // alles da, nichts anwählbar
+assert.ok(!(await (await call('/admin/export.csv', { headers: adm })).text()).includes('Volunteers'));
+r = await call('/admin/aktion', { headers: hier, form: { was: 'loeschen', id: vol } });   // Löschen sperrt den Link
+assert.equal(r.headers.get('location'), `${HOST}/admin?m=geloescht`);
+assert.equal((await call(`/k/${vol}/v/4`)).status, 404);
+
+// Mit no-referrer schicken Browser bei Formularen «Origin: null», dann gibt jeder Knopf im Admin 403.
+assert.equal((await call('/admin', { headers: adm })).headers.get('referrer-policy'), 'same-origin');
+
 r = await call('/admin/aktion', { headers: hier, form: { was: 'loeschen', id: t } });
 assert.equal(r.headers.get('location'), `${HOST}/admin?m=geloescht`);
 assert.equal((await call(`/k/${t}`)).status, 404);
