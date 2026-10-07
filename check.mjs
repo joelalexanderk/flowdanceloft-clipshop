@@ -109,6 +109,7 @@ assert.ok(!html.includes(`/k/${t}/v/0"`) && html.includes('value="0"'));   // di
 assert.equal(gesendet.mails.length, 1);
 assert.equal(gesendet.mails[0].to, 'familie@beispiel.ch');
 assert.ok(gesendet.mails[0].text.includes(`${HOST}/k/${t}`));
+assert.ok(gesendet.mails[0].html.includes(`href="${HOST}/k/${t}"`) && gesendet.mails[0].html.includes('Nr. 04 · Clouds &#38; Little Alien'));
 assert.equal((await call('/webhook', { json: { transaction: { referenceId: 'unsinn' } } })).status, 200);
 
 // ---------- Auslieferung: Range, Download, fremde und unbekannte Schlüssel ----------

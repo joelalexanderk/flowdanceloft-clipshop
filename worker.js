@@ -159,18 +159,29 @@ async function bestaetigt(env, origin, gid) {
   if (!r.meta.changes) return;   // schon freigeschaltet: Webhook und Seitenaufruf verschicken zusammen nur eine Mail
   const k = await env.DB.prepare(
     'SELECT b.token, b.email FROM buyers b JOIN purchases p ON p.token = b.token WHERE p.gateway_id = ? LIMIT 1').bind(gid).first();
-  await mail(env, k.email, 'Deine Clips von Flow Dance Loft sind bereit', `Hallo
+  const liste = (await env.DB.prepare('SELECT clip FROM purchases WHERE gateway_id = ? ORDER BY clip').bind(gid).all()).results
+    .map(r => r.clip === SHOWVIDEO ? 'Die ganze Show' : `Nr. ${nr2(r.clip)} · ${clipByNr.get(r.clip)?.titel ?? ''}`);
+  const link = `${origin}/k/${k.token}`;
+  await mail(env, k.email, 'Deine Videos von Flow Dance Loft sind bereit', `Hallo
 
-Danke für deinen Kauf. Deine Clips der Show «${SHOW.name}» sind bereit:
+Danke für deinen Kauf. Deine Videos der Show «${SHOW.name}» sind freigeschaltet:
 
-${origin}/k/${k.token}
+${liste.map(x => `- ${x}`).join('\n')}
 
-Das ist dein persönlicher Link. Dort kannst du die Clips ansehen und herunterladen.
+${link}
+
+Das ist dein persönlicher Link. Dort kannst du die Videos ansehen und herunterladen.
 Der Link bleibt gültig, du kannst jederzeit zurückkommen.
 
-Die Clips sind für den privaten Gebrauch bestimmt. Bitte nicht weitergeben oder veröffentlichen.
+Die Videos sind für den privaten Gebrauch bestimmt. Bitte nicht weitergeben oder veröffentlichen.
 
-Flow Dance Loft`);
+Flow Dance Loft`, mailHtml(env, origin, {
+    vorschau: `Deine Videos der Show «${SHOW.name}» sind freigeschaltet.`,
+    titel: 'Deine Videos', pointe: 'sind bereit.',
+    absatz: `Danke für deinen Kauf. Deine Videos der Show «${esc(SHOW.name)}» sind freigeschaltet:`,
+    liste, knoepfe: [{ href: link, label: 'Zu deinen Videos' }],
+    hinweis: 'Das ist dein persönlicher Link. Bewahre diese Mail auf oder setze ein Lesezeichen. Der Link bleibt gültig, du kannst die Videos jederzeit ansehen und herunterladen.',
+  }));
 }
 
 async function webhook(req, env, url) {
@@ -182,26 +193,71 @@ async function webhook(req, env, url) {
 
 // ---------- Mail ----------
 
-async function mail(env, an, betreff, text) {
+async function mail(env, an, betreff, text, html) {
   if (!env.RESEND_API_KEY) return console.log(`[Mail an ${an}] ${betreff}\n${text}\n`);
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
-      from: 'Flow Dance Loft Clips <clips@seismos.ch>', to: an, subject: betreff, text,
+      from: 'Flow Dance Loft Clips <clips@seismos.ch>', to: an, subject: betreff, text, ...(html && { html }),
       ...(env.CONTACT_EMAIL && { reply_to: env.CONTACT_EMAIL }),
     }),
   });
   if (!r.ok) console.error('Resend', r.status, await r.text());
 }
 
-const linkMail = (env, origin, email, tokens) => mail(env, email, 'Dein Link zu den Clips von Flow Dance Loft', `Hallo
+const linkMail = (env, origin, email, tokens) => mail(env, email, 'Dein Link zu den Videos von Flow Dance Loft', `Hallo
 
-Hier ist dein persönlicher Link zu deinen Clips:
+Hier ist dein persönlicher Link zu deinen Videos der Show «${SHOW.name}»:
 
 ${tokens.map(t => `${origin}/k/${t}`).join('\n')}
 
-Flow Dance Loft`);
+Du hast diese Mail nicht angefordert? Dann kannst du sie einfach ignorieren.
+
+Flow Dance Loft`, mailHtml(env, origin, {
+  vorschau: `Dein persönlicher Link zu den Videos der Show «${SHOW.name}».`,
+  titel: tokens.length > 1 ? 'Deine' : 'Dein', pointe: tokens.length > 1 ? 'Links.' : 'Link.',
+  absatz: `Hier kommst du zu deinen Videos der Show «${esc(SHOW.name)}».`,
+  knoepfe: tokens.map((t, i) => ({ href: `${origin}/k/${t}`, label: tokens.length > 1 ? `Zu deinen Videos (${i + 1})` : 'Zu deinen Videos' })),
+  hinweis: 'Du hast diese Mail nicht angefordert? Dann kannst du sie einfach ignorieren.',
+}));
+
+// Mail im Look des Shops. Tabellen und Inline-Styles, weil Mailprogramme kaum CSS können, und
+// Systemschriften, weil sie Webfonts nicht zuverlässig laden. Das Logo liegt öffentlich in public/.
+function mailHtml(env, origin, { vorschau, titel, pointe, absatz, liste = [], knoepfe, hinweis }) {
+  const ink = '#2B2A28', sans = "font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;";
+  const schmal = "font-family:'Arial Narrow','Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:-0.5px;";
+  const mono = "font-family:Menlo,Consolas,'Courier New',monospace;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;";
+  const zeile = (inhalt, oben = 0) => `<tr><td style="padding:${oben}px 28px 0;">${inhalt}</td></tr>`;
+  return `<!doctype html>
+<html lang="de-CH"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only"><title>${esc(titel)} ${esc(pointe)}</title></head>
+<body style="margin:0;padding:0;background:#F4F4F4;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(vorschau)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F4F4;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#FFFFFF;border:2px solid ${ink};border-radius:12px;border-collapse:separate;overflow:hidden;">
+  <tr><td style="background:#15B6B8;border-bottom:2px solid ${ink};padding:11px 28px;${mono}font-size:11px;color:${ink};">${esc(SHOW.kicker)}</td></tr>
+  ${zeile(`<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+    <td><img src="${origin}/flow-logo.jpg" width="44" height="44" alt="Flow Dance Loft" style="display:block;border-radius:50%;border:2px solid ${ink};"></td>
+    <td style="padding-left:12px;${schmal}font-size:22px;color:${ink};">Flow Dance Loft</td></tr></table>`, 24)}
+  ${zeile(`<div style="${schmal}font-size:44px;line-height:1.02;color:${ink};">${esc(titel)} <span style="color:#0C9092;">${esc(pointe)}</span></div>`, 28)}
+  ${zeile(`<div style="${sans}font-size:16px;line-height:1.5;color:${ink};">${absatz}</div>`, 16)}
+  ${liste.length ? zeile(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid ${ink};">${liste.map(x =>
+    `<tr><td style="padding:11px 0;border-bottom:1px solid #D6D5D1;${sans}font-size:15px;color:${ink};">${esc(x)}</td></tr>`).join('')}</table>`, 16) : ''}
+  ${knoepfe.map(k => zeile(`<table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#15B6B8;border:2px solid ${ink};border-radius:10px;">
+    <a href="${esc(k.href)}" style="display:inline-block;padding:15px 24px;${mono}font-size:14px;color:${ink};text-decoration:none;">${esc(k.label)} &rarr;</a></td></tr></table>
+    <div style="margin-top:10px;${sans}font-size:12px;line-height:1.4;color:#66635D;word-break:break-all;">${esc(k.href)}</div>`, 24)).join('')}
+  ${hinweis ? zeile(`<div style="background:#4BE2D3;border:2px solid ${ink};border-radius:8px;padding:14px 16px;${sans}font-size:14px;line-height:1.5;color:${ink};">${hinweis}</div>`, 24) : ''}
+  ${zeile(`<div style="${sans}font-size:15px;line-height:1.5;color:${ink};">Viel Freude beim Schauen<br><b>Flow Dance Loft</b>${env.CONTACT_EMAIL
+    ? `<br><span style="color:#66635D;font-size:13px;">Fragen? Antworte einfach auf diese Mail.</span>` : ''}</div>`, 28)}
+  <tr><td style="padding-top:28px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="background:#444340;padding:20px 28px;${sans}font-size:12px;line-height:1.6;color:#E4E3DF;">
+    <div style="${mono}font-size:11px;color:#4BE2D3;">grow with the flow</div>
+    <div style="margin-top:8px;"><b style="color:#FFFFFF;">Flow Dance Loft GmbH</b> · Zelgli 3 · 5452 Oberrohrdorf</div>
+    <div style="margin-top:8px;">Die Videos sind für den privaten Gebrauch bestimmt. Bitte nicht weitergeben oder veröffentlichen. Technik: Seismos Media.</div>
+  </td></tr></table></td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
 
 async function linkVergessen(req, env, url) {
   const email = String((await req.formData()).get('email') || '').trim().toLowerCase();
