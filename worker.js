@@ -323,7 +323,7 @@ const fuss = env => `<footer class="foot"><div class="wrap">
 const zeile = (c, da) => da.has(key(c.nr, 'mp4'))
   ? `<label class="row"><input type="checkbox" name="clip" value="${c.nr}">
       <span class="num">${nr2(c.nr)}</span>
-      <span class="thumb"><img src="/p/${c.nr}" alt="" loading="lazy" width="160" height="90"></span>
+      <span class="thumb">${da.has(key(c.nr, 'jpg')) ? `<img src="/p/${c.nr}" alt="" loading="lazy" width="160" height="90">` : ''}</span>
       <span class="txt"><b>${esc(c.titel)}</b><small>${esc(c.gruppe)}</small></span>
       <span class="tog">${ICON.plus}${ICON.haken}</span></label>`
   : `<div class="row soon">
@@ -425,7 +425,8 @@ async function meine(req, env, url, t) {
   const da = await vorhanden(env), show = hat.has(SHOWVIDEO), bezahlteClips = hat.size - show;
   const meins = CLIPS.filter(c => hat.has(c.nr)), rest = CLIPS.filter(c => !hat.has(c.nr));
   const karte = (nr, titel, unter) => `<article class="clip${nr === SHOWVIDEO ? ' gross' : ''}"><i class="tape"></i>
-      <video controls playsinline preload="none" poster="/p/${nr === SHOWVIDEO ? 'hero' : nr}" src="/k/${t}/v/${nr}"></video>
+      <video controls playsinline preload="${da.has(key(nr, 'jpg')) || nr === SHOWVIDEO ? 'none' : 'metadata'}"${
+        nr === SHOWVIDEO ? ' poster="/p/hero"' : da.has(key(nr, 'jpg')) ? ` poster="/p/${nr}"` : ''} src="/k/${t}/v/${nr}"></video>
       <div class="cmeta">${nr === SHOWVIDEO ? '' : `<span class="num">${nr2(nr)}</span>`}<span class="txt"><b>${esc(titel)}</b><small>${esc(unter)}</small></span></div>
       <a class="btn" href="/k/${t}/v/${nr}?dl=1" download>Herunterladen ${ICON.laden}</a>
     </article>`;

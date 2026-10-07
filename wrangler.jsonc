@@ -1,22 +1,31 @@
 {
   // Clip-Shop Flow Dance Loft: ein Worker, D1 für die Käufe, R2 für die Clips.
-  // Lokal zeigen (Laptop und Handy im selben WLAN): npx wrangler dev --ip 0.0.0.0
-  // Ohne PAYREXX_API_KEY läuft der Demo-Modus mit eigener Zahlseite.
   //
-  // Vor dem Live-Gang: R2 im Dashboard aktivieren, Bucket und D1 anlegen, database_id eintragen,
-  // die Route einkommentieren und die Secrets setzen (wrangler secret put):
-  // PAYREXX_API_KEY, RESEND_API_KEY, ADMIN_PASSWORD, optional SITE_PASSWORD.
+  // Lokal zeigen (Laptop und Handy im selben WLAN): npx wrangler dev --ip 0.0.0.0
+  // Ausrollen:                                      npx wrangler deploy --domain flowdance.seismos.ch
+  //
+  // Die Domain steht bewusst nicht als Route in dieser Datei: Sonst meldet «wrangler dev» dem Worker
+  // den Hostnamen der Route statt localhost, und die lokale Demo verlangt ein Passwort.
+  //
+  // Ohne PAYREXX_API_KEY läuft der Demo-Modus mit eigener Zahlseite, online nur hinter SITE_PASSWORD.
+  // Secrets (wrangler secret put): ADMIN_PASSWORD, SITE_PASSWORD, später PAYREXX_API_KEY und RESEND_API_KEY.
   "name": "flowdance-clips",
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": { "directory": "./public" },
   "d1_databases": [
-    { "binding": "DB", "database_name": "flowdance-clips", "database_id": "00000000-0000-0000-0000-000000000000" }
+    {
+      "binding": "DB",
+      "database_name": "flowdance-clips",
+      "database_id": "2b720c20-79ea-44e4-a5aa-216b07bbbe91",
+      "preview_database_id": "00000000-0000-0000-0000-000000000000"   // lokale Datenbank von «wrangler dev»
+    }
   ],
   "r2_buckets": [{ "binding": "CLIPS", "bucket_name": "flowdance-clips" }],
   "vars": {
     "PAYREXX_INSTANCE": "",   // Instanzname von Flow Dance Loft (xyz in xyz.payrexx.com)
     "CONTACT_EMAIL": ""       // Adresse für Fragen der Eltern, steht im Footer und als Antwortadresse
   }
-  // "routes": [{ "pattern": "flowdance.seismos.ch", "custom_domain": true }]
 }
