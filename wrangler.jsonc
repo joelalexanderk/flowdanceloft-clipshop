@@ -1,0 +1,22 @@
+{
+  // Clip-Shop Flow Dance Loft: ein Worker, D1 für die Käufe, R2 für die Clips.
+  // Lokal zeigen (Laptop und Handy im selben WLAN): npx wrangler dev --ip 0.0.0.0
+  // Ohne PAYREXX_API_KEY läuft der Demo-Modus mit eigener Zahlseite.
+  //
+  // Vor dem Live-Gang: R2 im Dashboard aktivieren, Bucket und D1 anlegen, database_id eintragen,
+  // die Route einkommentieren und die Secrets setzen (wrangler secret put):
+  // PAYREXX_API_KEY, RESEND_API_KEY, ADMIN_PASSWORD, optional SITE_PASSWORD.
+  "name": "flowdance-clips",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./public" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "flowdance-clips", "database_id": "00000000-0000-0000-0000-000000000000" }
+  ],
+  "r2_buckets": [{ "binding": "CLIPS", "bucket_name": "flowdance-clips" }],
+  "vars": {
+    "PAYREXX_INSTANCE": "",   // Instanzname von Flow Dance Loft (xyz in xyz.payrexx.com)
+    "CONTACT_EMAIL": ""       // Adresse für Fragen der Eltern, steht im Footer und als Antwortadresse
+  }
+  // "routes": [{ "pattern": "flowdance.seismos.ch", "custom_domain": true }]
+}

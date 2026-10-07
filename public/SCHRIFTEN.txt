@@ -1,0 +1,5 @@
+Schriften in diesem Ordner, alle unter der SIL Open Font License 1.1 (https://openfontlicense.org):
+
+space-grotesk.ttf       Space Grotesk, Florian Karsten
+space-mono-bold.woff2   Space Mono, Colophon Foundry
+big-shoulders.woff2     Big Shoulders Display, Patric King
