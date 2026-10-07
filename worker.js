@@ -334,7 +334,7 @@ async function demoZahlung(req, env, url, id) {
     <label class="pm"><span>Karte<small>Visa · Mastercard</small></span><input type="radio" name="pm"></label>
     <button class="paybtn">${betrag} bezahlen</button>
   </form>
-  <p class="secure">Im echten Shop steht hier die Zahlseite von Payrexx.<br>Das Geld geht direkt an Flow Dance Loft. <a href="/k/${t}">Abbrechen</a></p>
+  <p class="secure">Im echten Shop steht hier die Zahlseite von RaiseNow.<br>Das Geld geht direkt an Flow Dance Loft. <a href="/k/${t}">Abbrechen</a></p>
 </main>`, { klasse: 'pay' });
 }
 
@@ -558,7 +558,7 @@ function bedingungen(env) {
       <h3>So läuft der Kauf</h3>
       <ol>
         <li>Du wählst die Videos aus und gibst deine E-Mail-Adresse an.</li>
-        <li>Du bezahlst auf der Zahlseite von Payrexx mit TWINT oder Karte. Bis dahin kannst du die Auswahl ändern oder abbrechen. Das Geld geht direkt an Flow Dance Loft.</li>
+        <li>Du bezahlst auf der Zahlseite von RaiseNow mit TWINT oder Karte. Bis dahin kannst du die Auswahl ändern oder abbrechen. Das Geld geht direkt an Flow Dance Loft.</li>
         <li>Sobald die Zahlung bestätigt ist, sind die Videos freigeschaltet. Du landest auf deiner persönlichen Seite und bekommst den Link zusätzlich per E-Mail.</li>
       </ol>
       <h3>Kein Konto, ein Link</h3>
@@ -578,13 +578,13 @@ function bedingungen(env) {
       <h3>Verantwortlich</h3>
       <p>Flow Dance Loft GmbH, Zelgli 3, 5452 Oberrohrdorf. Seismos Media bearbeitet die Daten im Auftrag von Flow Dance Loft.</p>
       <h3>Was gespeichert wird</h3>
-      <p>Deine E-Mail-Adresse, was du gekauft hast, wann und zu welchem Betrag, und ob die Zahlung bestätigt ist. Mehr nicht. Deine Karten- oder TWINT-Angaben gibst du direkt bei Payrexx ein, dieser Shop bekommt sie nie.</p>
+      <p>Deine E-Mail-Adresse, was du gekauft hast, wann und zu welchem Betrag, und ob die Zahlung bestätigt ist. Mehr nicht. Deine Karten- oder TWINT-Angaben gibst du direkt bei RaiseNow ein, dieser Shop bekommt sie nie.</p>
       <h3>Wofür</h3>
       <p>Damit du deine Videos bekommst und den Link wieder anfordern kannst, für Rückfragen und für die Buchhaltung. Du bekommst nur Mails zu deinem Kauf: die Bestätigung und den Link, wenn du ihn anforderst. Kein Newsletter, keine Werbung.</p>
       <h3>Wer die Daten sieht</h3>
       <p>Flow Dance Loft und, für den Betrieb, Seismos Media. Deine Daten werden weder verkauft noch für etwas anderes verwendet. Dazu kommen drei Dienstleister:</p>
       <ul>
-        <li><b>Payrexx AG</b>, Thun, Schweiz: wickelt die Zahlung ab. Für deine Zahlungsangaben gilt die Datenschutzerklärung von Payrexx.</li>
+        <li><b>RaiseNow AG</b>, Zürich, Schweiz: wickelt die Zahlung ab. Für deine Zahlungsangaben gilt die Datenschutzerklärung von RaiseNow.</li>
         <li><b>Cloudflare, Inc.</b>, USA: betreibt die Webseite und speichert Datenbank und Videos in Westeuropa. Beim Aufruf der Seite verarbeitet Cloudflare technisch nötige Daten wie deine IP-Adresse, auch ausserhalb Europas.</li>
         <li><b>Resend, Inc.</b>, USA: verschickt die Mails über Server in Irland.</li>
       </ul>
