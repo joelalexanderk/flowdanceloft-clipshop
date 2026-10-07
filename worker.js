@@ -334,18 +334,21 @@ const zeile = (c, da) => da.has(key(c.nr, 'mp4'))
 
 // Oben die ganze Show als ein Video, darunter das Programm als Zeilen, unten die Leiste mit Betrag und «Bezahlen».
 // Die Summe in der Leiste ist nur Anzeige, gerechnet wird in kaufen().
-function auswahl(action, clips, da, hat, mitMail) {
+// «zwischen» steht zwischen der ganzen Show und dem Programm (Startseite: die Überschrift zum Programm).
+function auswahl(action, clips, da, hat, mitMail, zwischen) {
   const pause = i => i > 0 && clips[i - 1].nr <= SHOW.pauseNach && clips[i].nr > SHOW.pauseNach;
   // Der Streifen zeigt das Programm auf einen Blick: da, folgt, gekauft, gewählt.
   const streifen = CLIPS.map((c, i) => (i > 0 && CLIPS[i - 1].nr <= SHOW.pauseNach && c.nr > SHOW.pauseNach ? '<i class="p"></i>' : '')
     + `<i data-n="${c.nr}" class="${hat.has(c.nr) ? 'own' : da.has(key(c.nr, 'mp4')) ? '' : 's'}"></i>`).join('');
-  const show = da.has(key(SHOWVIDEO, 'mp4')) && !hat.has(SHOWVIDEO);
+  // Die ganze Show ist immer zu sehen. Ohne Datei im Bucket steht «folgt», kaufbar wird sie mit dem Upload.
+  const show = !hat.has(SHOWVIDEO), kaufbar = show && da.has(key(SHOWVIDEO, 'mp4'));
+  const text = '<span class="txt"><b>Die ganze Show</b><small>Die ganze Vorstellung als ein Video</small></span>';
   return `<form class="shop" method="post" action="${action}" data-paid="${hat.size - hat.has(SHOWVIDEO)}">
-  ${show ? `<label class="alle"><input type="checkbox" name="clip" value="${SHOWVIDEO}">
-    <span class="txt"><b>Die ganze Show</b><small>Die ganze Vorstellung als ein Video</small></span>
+  ${kaufbar ? `<label class="alle" id="show"><input type="checkbox" name="clip" value="${SHOWVIDEO}">${text}
     <span class="pill"><b>${chf(PREIS_SHOW)}</b></span>
-    <span class="tog">${ICON.plus}${ICON.haken}</span></label>` : ''}
-  ${clips.length ? `${show ? '<p class="oder">Oder einzelne Nummern</p>' : ''}
+    <span class="tog">${ICON.plus}${ICON.haken}</span></label>`
+    : show ? `<div class="alle soon" id="show">${text}<span class="pill out">folgt</span></div>` : ''}
+  ${clips.length ? `${zwischen || (show ? '<p class="oder">Oder einzelne Nummern</p>' : '')}
   <div class="strip" aria-hidden="true">${streifen}</div>
   <div class="list">${clips.map((c, i) => (pause(i) ? '<div class="pause">Pause</div>' : '') + zeile(c, da)).join('')}</div>` : ''}
   <div class="bar">
@@ -380,15 +383,15 @@ async function start(req, env, url) {
       <span class="sticker">Show ${SHOW.jahr} · Die Clips sind da</span>
       <h1 class="over" aria-label="${esc(SHOW.name)}"><span aria-hidden="true">${esc(SHOW.titel)}<br>${esc(SHOW.pointe)}</span><span aria-hidden="true">${esc(SHOW.titel)}<br>${esc(SHOW.pointe)}</span></h1>
       <p class="lead">Jede Nummer als eigener Clip in Full HD, oder die ganze Show als ein Video. Bezahlen, sofort ansehen und herunterladen.</p>
-      <p class="preise"><span class="pill">1 Clip <b>${chf(PREIS_1)}</b></span><span class="pill">2 Clips <b>${chf(PREIS_2)}</b></span><span class="pill y">Ganze Show <b>${chf(PREIS_SHOW)}</b></span></p>
+      <p class="preise"><a class="pill y" href="#show">Ganze Show <b>${chf(PREIS_SHOW)}</b></a><span class="pill">1 Clip <b>${chf(PREIS_1)}</b></span><span class="pill">2 Clips <b>${chf(PREIS_2)}</b></span></p>
     </div>
     ${da.has(`${SHOW.jahr}/hero.jpg`) ? '<figure class="taped"><img src="/p/hero" alt="Das Finale der Show" width="1600" height="900"><i class="tape"></i><i class="tape"></i></figure>' : ''}
   </section>
   <section class="sect wrap">
-    <p class="label">Das Programm</p>
-    <h2>Wähle <em>deine Clips.</em></h2>
+    <p class="label">Alles auf einmal</p>
     ${hinweis(url)}
-    ${auswahl('/buy', CLIPS, da, new Set(), true)}
+    ${auswahl('/buy', CLIPS, da, new Set(), true,
+      '<div class="zwischen"><p class="label">Das Programm</p><h2>Oder einzelne <em>Clips.</em></h2></div>')}
   </section>
   <section class="block"><div class="wrap">
     <h2>Schon gekauft?</h2>
@@ -440,7 +443,7 @@ async function meine(req, env, url, t) {
     <p class="tip">Lade deine Videos herunter, dann bleiben sie dir für immer. Online sind sie mindestens bis ${SHOW.onlineBis}.${show ? ' Die ganze Show ist eine grosse Datei, lade sie am besten im WLAN.' : ''} Auf dem iPhone landet der Download in der Dateien-App, über «Teilen» und «Video sichern» kommt er in die Fotos.</p>`
       : '<p class="lead">Hier erscheinen deine Videos, sobald die Zahlung eingegangen ist.</p>'}
   </section>
-  ${rest.length || (!show && da.has(key(SHOWVIDEO, 'mp4'))) ? `<section class="sect wrap">
+  ${rest.length || !show ? `<section class="sect wrap">
     <p class="label">${rest.length ? `Nächster Clip ${chf(preis(bezahlteClips + 1) - preis(bezahlteClips))}` : 'Noch nicht dabei'}</p>
     <h2>${hat.size ? 'Noch' : 'Wähle'} <em>${hat.size ? 'mehr.' : 'deine Clips.'}</em></h2>
     ${auswahl(`/k/${t}/buy`, rest, da, hat, false)}
@@ -602,6 +605,10 @@ h2 em, .h1 em { font-style: normal; color: var(--teal-big); }
         padding: 14px 12px 14px 14px; background: var(--teal); border: var(--b); border-radius: var(--r); box-shadow: var(--shadow);
         cursor: pointer; transition: transform .12s, box-shadow .12s, background .15s; }
 .alle input { position: absolute; opacity: 0; pointer-events: none; }
+.alle.soon { cursor: default; background: var(--card); }
+.zwischen { margin-top: 48px; }
+a.pill { text-decoration: none; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
 .alle .txt b { font-size: 30px; }
 .alle .txt small { color: var(--ink); }
 .alle:has(:focus-visible) { outline: 3px solid var(--teal-ink); outline-offset: 3px; }
@@ -742,6 +749,7 @@ body.pay { background: #fff; color: var(--ink); }
   .hero { grid-template-columns: 420px minmax(0, 720px); max-width: none; margin-left: max(0px, (100% - 860px) / 2); padding-right: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   .run { animation: none; }
   .btn, .row, .alle, .strip i { transition: none; }
 }

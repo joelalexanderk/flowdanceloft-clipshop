@@ -214,7 +214,8 @@ assert.equal((await call('/p/hero')).status, 200);
 // Ohne Datei gibt es die ganze Show nicht zu kaufen.
 dateien.delete('2026/show.mp4');
 n = gesendet.payrexx.length;
-assert.ok(!(await (await call('/')).text()).includes('value="0"'));
+html = await (await call('/')).text();
+assert.ok(!html.includes('value="0"') && html.includes('id="show"') && html.includes('Die ganze Show'));   // sichtbar, aber «folgt»
 r = await call('/buy', { form: { clip: '0', email: 'x@beispiel.ch' } });
 assert.equal(r.headers.get('location'), `${HOST}/?m=leer`);
 assert.equal(gesendet.payrexx.length, n);
