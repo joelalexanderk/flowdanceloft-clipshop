@@ -1,8 +1,8 @@
 // Show, Preise und freigegebene Nummern. Quelle: Line-up-Excel in «02 | The Space Between/02 | Produktion».
 // Kaufbar ist eine Nummer erst, wenn sie hier steht UND ihre Datei im Bucket liegt (sonst «folgt»).
 //
-// Nummern, die hier fehlen, sind nicht freigegeben. clips.py lädt nur hoch, was hier steht.
-// Welche das sind, steht in der Projektübersicht und bewusst nicht in diesem öffentlichen Repo.
+// Seit 07.10.2026 stehen alle Nummern hier (Joels Entscheid). Was vor dem echten Verkauf noch
+// freigegeben werden muss, steht in der Projektübersicht. clips.py lädt nur hoch, was hier steht.
 
 export const SHOW = {
   jahr: '2026',                 // Präfix im Bucket: 2026/nr04.mp4
@@ -22,19 +22,28 @@ export const preis = n => Math.floor(n / 2) * PREIS_2 + (n % 2) * PREIS_1;
 
 export const CLIPS = [
   { nr: 1,  titel: 'Space Between',               gruppe: 'Kindertanzen KIGA · Vanessa' },
+  { nr: 2,  titel: 'Between the Stars',           gruppe: 'Ballett KIGA · Rüya' },
   { nr: 3,  titel: 'Orbit',                       gruppe: 'Ballett 7. Kl. · Rüya' },
-  { nr: 4,  titel: 'Clouds',                      gruppe: 'Jazz 5. Kl. · Nita' },
-  { nr: 5,  titel: 'Little Alien',                gruppe: 'Jazz KIGA–3. Kl. · Nita' },
+  { nr: 4,  titel: 'Clouds & Little Alien',       gruppe: 'Jazz 5. Kl. und KIGA–3. Kl. · Nita' },   // Nr. 4 und 5 tanzen zusammen, ein Clip
   { nr: 6,  titel: 'Voilà, c’est moi',            gruppe: 'Ballett 4. Kl. · Taryn' },
+  { nr: 7,  titel: 'Little Swans',                gruppe: 'Ballett 1./2. Kl. · Taryn' },
+  { nr: 8,  titel: 'Over the Rainbow',            gruppe: 'Voilà & Little Swans · Taryn' },
+  { nr: 9,  titel: 'Hometown Glory',              gruppe: 'Teens · Taryn' },
   { nr: 10, titel: 'Through Strawberry Fields',   gruppe: 'Ballett KIGA / 1. Kl. · Taryn' },
   { nr: 11, titel: 'Defying Gravity',             gruppe: 'Ballett 5.–7. Kl. · Taryn' },
+  { nr: 12, titel: 'Hide & Seek',                 gruppe: 'Ballett 3./4. Kl. · Rüya' },
   { nr: 13, titel: 'Vibration',                   gruppe: 'Jazz 9–14 J. · Taryn' },
   { nr: 14, titel: 'Jump!',                       gruppe: 'Hip Hop 6–11 J. · Musa' },
+  { nr: 15, titel: 'Bouwéy',                      gruppe: 'Island Heat Erwachsene · Kéké' },
   { nr: 16, titel: 'Fever',                       gruppe: 'Teens Ballett · Taryn' },
   { nr: 17, titel: 'A Whole New World',           gruppe: 'Ballett 2./3. Kl. · Taryn' },
   { nr: 18, titel: 'Bridgerton',                  gruppe: 'Ballett KIGA–2. Kl. · Taryn' },   // Programmtitel noch zu klären
+  { nr: 19, titel: 'Big Picture',                 gruppe: 'Spitzentanz Teens · Taryn' },
+  { nr: 20, titel: 'Adventure Awaits',            gruppe: 'Ballett die Kleinsten · Taryn' },
+  { nr: 21, titel: 'Can You Feel the Love Tonight?', gruppe: 'Ballett · Taryn' },
   { nr: 22, titel: 'Break the Beat',              gruppe: 'Breaking Minis/Midis · Bboy Cho' },
   { nr: 23, titel: 'Arcade',                      gruppe: 'Jazz · Nita' },
+  { nr: 24, titel: 'Fly Before I Fall',           gruppe: 'Teens Ballett · Taryn' },
   { nr: 25, titel: 'Where Sunflowers Bloom',      gruppe: 'Ballett KIGA–1. Kl. · Taryn' },
   { nr: 26, titel: 'Rewrite the Stars',           gruppe: 'Ballett KIGA–6. Kl. · Taryn' },
   { nr: 27, titel: 'Who Am I',                    gruppe: 'Teens · Nita' },

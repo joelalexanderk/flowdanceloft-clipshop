@@ -74,12 +74,12 @@ const tokenAus = r => /k=([0-9a-f-]{36})/.exec(r.headers.get('set-cookie'))[1];
 
 // ---------- Erster Kauf: zwei Clips, Betrag vom Server ----------
 
-let r = await call('/buy', { form: [['clip', '4'], ['clip', '11'], ['clip', '13'], ['clip', '7'], ['email', ' Familie@Beispiel.ch '], ['amount', '1']] });
+let r = await call('/buy', { form: [['clip', '4'], ['clip', '11'], ['clip', '13'], ['clip', '99'], ['email', ' Familie@Beispiel.ch '], ['amount', '1']] });
 assert.equal(r.status, 303);
 assert.equal(r.headers.get('location'), 'https://flowdance.payrexx.com/?payment=101');
 const t = tokenAus(r);
 assert.equal(gesendet.payrexx.length, 1);
-assert.equal(gesendet.payrexx[0].amount, '1500');           // zwei Clips. Nr. 13 (keine Datei) und Nr. 7 (nicht freigegeben) fallen weg
+assert.equal(gesendet.payrexx[0].amount, '1500');           // zwei Clips. Nr. 13 (keine Datei) und Nr. 99 (gibt es nicht) fallen weg
 assert.equal(gesendet.payrexx[0].currency, 'CHF');
 assert.equal(gesendet.payrexx[0].purpose, 'Flow Dance Loft Clips · Nr. 4, Nr. 11');
 assert.equal(gesendet.payrexx[0].referenceId, t);
@@ -125,7 +125,7 @@ assert.equal((await call(`/k/${t}/v/4`, { headers: { range: 'bytes=5000-' } })).
 r = await call(`/k/${t}/v/4?dl=1`);
 assert.equal(r.status, 200);
 assert.equal(r.headers.get('content-type'), 'video/mp4');
-assert.equal(r.headers.get('content-disposition'), 'attachment; filename="FlowDanceLoft_2026_Nr04_Clouds.mp4"');
+assert.equal(r.headers.get('content-disposition'), 'attachment; filename="FlowDanceLoft_2026_Nr04_Clouds_Little_Alien.mp4"');
 assert.equal((await call(`/k/${t}/v/14`)).status, 403);                                 // nicht gekauft
 assert.equal((await call(`/k/${t}/v/0`)).status, 403);                                  // Clips öffnen die ganze Show nicht
 assert.equal((await call('/k/00000000-0000-4000-8000-000000000000/v/4')).status, 404);    // unbekannter Schlüssel
@@ -205,9 +205,9 @@ assert.equal(r.status, 200);
 html = await r.text();
 assert.ok(html.includes('CHF 50') && html.includes('familie@beispiel.ch'));   // 15 (zwei Clips) + 10 (ein Clip) + 25 (ganze Show)
 html = await (await call('/')).text();
-assert.ok(html.includes('value="0"') && html.includes('value="4"') && !html.includes('value="13"') && !html.includes('value="7"'));
+assert.ok(html.includes('value="0"') && html.includes('value="4"') && !html.includes('value="13"') && !html.includes('value="99"'));
 assert.ok(html.includes('src="/p/hero"') && !html.includes('Nummern sind da'));
-assert.equal((await call('/p/7')).status, 404);              // nicht freigegeben: auch kein Standbild
+assert.equal((await call('/p/99')).status, 404);             // nicht im Programm: auch kein Standbild
 assert.equal((await call('/p/4')).status, 200);
 assert.equal((await call('/p/hero')).status, 200);
 

@@ -3,12 +3,15 @@
 
   python3 clips.py demo                                rund 25 s pro Nummer aus dem Handheld-Material, lokal
   python3 clips.py upload <ordner> [--remote]          fertige Einzelclips kodieren und hochladen
-  python3 clips.py show <datei> [--remote]             die ganze Show als ein Video
+  python3 clips.py show <datei|liste.txt> [--remote]   die ganze Show als ein Video (liste.txt: ffmpeg-concat-Liste)
   python3 clips.py hero <bild|video> [sek] [--remote]  das Bild oben auf der Startseite (und Standbild der ganzen Show)
 
 Im Ordner zählt die erste Zahl im Dateinamen als Nummer («04 Clouds.mp4»). Hochgeladen wird nur,
 was in clips.js steht. So kommt keine gesperrte Nummer in den Shop.
 Ohne --remote landet alles im lokalen Speicher von «wrangler dev».
+
+Dateien über 300 MB (die ganze Show) gehen über die S3-Schnittstelle von R2. Dafür in der Umgebung:
+R2_ACCOUNT_ID, R2_ACCESS_KEY_ID und R2_TOKEN (Wert des R2-API-Tokens, Rechte «Object Read & Write»).
 """
 import csv, os, re, subprocess, sys, tempfile
 
@@ -29,9 +32,14 @@ def dauer(datei):
     return float(aus)
 
 
-def kodieren(quelle, ziel, laenge=None, maxrate=8):
-    """Auslieferungsfassung: H.264 in 1080p mit höchstens 8 Mbit/s, AAC, faststart. Spielt auf jedem Handy."""
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', quelle, *(['-t', str(laenge)] if laenge else []),
+def kodieren(quelle, ziel, laenge=None, maxrate=None):
+    """Auslieferungsfassung: H.264 in 1080p mit höchstens 8 Mbit/s, AAC, faststart. Spielt auf jedem Handy.
+
+    Lange Clips bekommen weniger, damit die Datei unter MAX_MB bleibt (Grenze von wrangler)."""
+    if maxrate is None:
+        maxrate = min(8, round(MAX_MB * 0.9 * 8 / (laenge or dauer(quelle)) - 0.25, 1))
+    eingang = ['-f', 'concat', '-safe', '0', '-i', quelle] if quelle.endswith('.txt') else ['-i', quelle]
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', *eingang, *(['-t', str(laenge)] if laenge else []),
                     '-vf', 'scale=-2:1080', '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
                     '-maxrate', f'{maxrate}M', '-bufsize', f'{2 * maxrate}M', '-pix_fmt', 'yuv420p',
                     '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-movflags', '+faststart', ziel], check=True)
@@ -45,11 +53,21 @@ def ablegen(datei, schluessel, typ, ort):
     return mb
 
 
+def ablegen_gross(datei, schluessel, typ):
+    """Über die S3-Schnittstelle von R2, in Teilen. Das Secret ist der SHA-256 des Token-Werts."""
+    import boto3, hashlib
+    s3 = boto3.client('s3', endpoint_url=f"https://{os.environ['R2_ACCOUNT_ID']}.r2.cloudflarestorage.com",
+                      aws_access_key_id=os.environ['R2_ACCESS_KEY_ID'], region_name='auto',
+                      aws_secret_access_key=hashlib.sha256(os.environ['R2_TOKEN'].encode()).hexdigest())
+    s3.upload_file(datei, BUCKET, schluessel, ExtraArgs={'ContentType': typ})
+    return os.path.getsize(datei) / 1e6
+
+
 def hochladen(nr, quelle, ort, tmp, laenge=None):
     film, bild = os.path.join(tmp, f'nr{nr:02d}.mp4'), os.path.join(tmp, f'nr{nr:02d}.jpg')
     kodieren(quelle, film, laenge)
     # Standbild nicht vom Anfang: Dort ist die Bühne oft noch dunkel.
-    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(min(20, dauer(film) / 3)), '-i', film,
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-ss', str(dauer(film) * 0.4), '-i', film,
                     '-frames:v', '1', '-vf', 'scale=960:-2', '-q:v', '4', bild], check=True)
     mb = ablegen(film, f'{JAHR}/nr{nr:02d}.mp4', 'video/mp4', ort)
     ablegen(bild, f'{JAHR}/nr{nr:02d}.jpg', 'image/jpeg', ort)
@@ -61,10 +79,12 @@ def show(quelle, ort):
     film = os.path.splitext(quelle)[0] + '.shop.mp4'   # neben der Quelle: Stunden an Kodierzeit gehen so nicht verloren
     kodieren(quelle, film, maxrate=4)
     mb = os.path.getsize(film) / 1e6
-    if mb >= MAX_MB:
-        sys.exit(f'{film}: {mb:.0f} MB, das ist zu gross für wrangler. Mit rclone hochladen:\n'
-                 f'  rclone copyto "{film}" r2:{BUCKET}/{JAHR}/show.mp4')
-    ablegen(film, f'{JAHR}/show.mp4', 'video/mp4', ort)
+    if mb < MAX_MB:
+        ablegen(film, f'{JAHR}/show.mp4', 'video/mp4', ort)
+    elif ort == '--remote' and 'R2_TOKEN' in os.environ:
+        ablegen_gross(film, f'{JAHR}/show.mp4', 'video/mp4')
+    else:
+        sys.exit(f'{film}: {mb:.0f} MB, zu gross für wrangler. Mit --remote und R2_TOKEN usw. hochladen (siehe oben).')
     print(f'Ganze Show  {mb:6.1f} MB  {os.path.basename(quelle)}', flush=True)
 
 
